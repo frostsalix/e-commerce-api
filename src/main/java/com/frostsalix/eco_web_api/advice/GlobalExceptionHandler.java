@@ -2,6 +2,7 @@ package com.frostsalix.eco_web_api.advice;
 import com.frostsalix.eco_web_api.common.ApiResponse;
 import com.frostsalix.eco_web_api.exception.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
 //  全局异常处理器
@@ -18,5 +19,15 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ApiResponse<String> handleException(Exception ex) {
         return new ApiResponse<>(500, "Internal server error", null);
+    }
+
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ApiResponse<String> handleValidation(MethodArgumentNotValidException ex) {
+        String msg = ex.getBindingResult()
+                .getFieldError()
+                .getDefaultMessage();
+
+        return new ApiResponse<>(400, msg, null);
     }
 }

@@ -3,6 +3,7 @@ package com.frostsalix.eco_web_api.controller;
 import com.frostsalix.eco_web_api.common.ApiResponse;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,7 +19,7 @@ public class ProductController {
     }
 
     @PostMapping
-    public ApiResponse<Product> addProduct(@RequestBody Product product) {
+    public ApiResponse<Product> addProduct(@RequestBody @Valid Product product) {
         return ApiResponse.success(productService.addProduct(product));
     }
 
@@ -34,7 +35,7 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ApiResponse<Product> update(@PathVariable Long id,
-                                       @RequestBody Product product) {
+                                       @RequestBody @Valid Product product) {
         return ApiResponse.success(productService.updateProduct(id, product));
     }
 
