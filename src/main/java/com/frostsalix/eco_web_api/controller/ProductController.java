@@ -1,6 +1,8 @@
 package com.frostsalix.eco_web_api.controller;
 
 import com.frostsalix.eco_web_api.common.ApiResponse;
+import com.frostsalix.eco_web_api.dto.ProductDTO;
+import com.frostsalix.eco_web_api.dto.ProductResponseDTO;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.service.ProductService;
 import jakarta.validation.Valid;
@@ -19,17 +21,17 @@ public class ProductController {
     }
 
     @PostMapping
-    public ApiResponse<Product> addProduct(@RequestBody @Valid Product product) {
-        return ApiResponse.success(productService.addProduct(product));
+    public ApiResponse<ProductResponseDTO> addProduct(@RequestBody @Valid ProductDTO dto) {
+        return ApiResponse.success(productService.addProduct(dto));
     }
 
     @GetMapping
-    public ApiResponse<List<Product>> getAllProducts() {
+    public ApiResponse<List<ProductResponseDTO>> getAll() {
         return ApiResponse.success(productService.getAllProducts());
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<Product> getById(@PathVariable Long id) {
+    public ApiResponse<ProductResponseDTO> getById(@PathVariable Long id) {
         return ApiResponse.success(productService.getProductById(id));
     }
 

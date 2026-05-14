@@ -1,5 +1,7 @@
 package com.frostsalix.eco_web_api.service;
 
+import com.frostsalix.eco_web_api.dto.ProductDTO;
+import com.frostsalix.eco_web_api.dto.ProductResponseDTO;
 import com.frostsalix.eco_web_api.exception.ResourceNotFoundException;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
@@ -16,17 +18,29 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
-    public Product addProduct(Product product) {
-        return productRepository.save(product);
+    public ProductResponseDTO addProduct(ProductDTO dto) {
+
+        Product product = new Product();
+        product.setName(dto.getName());
+        product.setPrice(dto.getPrice());
+        product.setStock(dto.getStock());
+
+        Product saved = productRepository.save(product);
+
+        return convertToDTO(saved);
+    }
+    public List<ProductResponseDTO> getAllProducts() {
+        return productRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
     }
 
-    public List<Product> getAllProducts() {
-        return productRepository.findAll();
-    }
+    public ProductResponseDTO getProductById(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-    public Product getProductById(Long id) {
-        return productRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
+        return convertToDTO(product);
     }
 
     public Product updateProduct(Long id, Product newProduct) {
@@ -46,5 +60,16 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productRepository.deleteById(id);
+    }
+
+    private ProductResponseDTO convertToDTO(Product product) {
+
+        ProductResponseDTO dto = new ProductResponseDTO();
+        dto.setId(product.getId());
+        dto.setName(product.getName());
+        dto.setPrice(product.getPrice());
+        dto.setStock(product.getStock());
+
+        return dto;
     }
 }
