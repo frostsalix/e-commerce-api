@@ -1,6 +1,7 @@
 package com.frostsalix.eco_web_api.util;
 
-import io.jsonwebtoken.*;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
 
 import java.security.Key;
@@ -9,26 +10,18 @@ import java.util.Date;
 public class JwtUtil {
 
     private static final String SECRET =
-            "01234567890123456789012345678901"; // 32字节
+            "01234567890123456789012345678901";
 
-    private static final Key key =
+    private static final Key KEY =
             Keys.hmacShaKeyFor(SECRET.getBytes());
 
     public static String generateToken(String username) {
-        return Jwts.builder()
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + 3600000))
-                .signWith(key, SignatureAlgorithm.HS256)
-                .compact();
-    }
 
-    public static String getUsername(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(key)
-                .build()
-                .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+        return Jwts.builder()
+                .subject(username)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .signWith(KEY, SignatureAlgorithm.HS256)
+                .compact();
     }
 }
