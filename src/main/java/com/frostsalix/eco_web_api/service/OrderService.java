@@ -1,10 +1,6 @@
 package com.frostsalix.eco_web_api.service;
 
-import com.frostsalix.eco_web_api.model.CartItem;
-import com.frostsalix.eco_web_api.model.Order;
-import com.frostsalix.eco_web_api.model.Product;
-import com.frostsalix.eco_web_api.model.User;
-import com.frostsalix.eco_web_api.model.OrderItem;
+import com.frostsalix.eco_web_api.model.*;
 import com.frostsalix.eco_web_api.repository.CartItemRepository;
 import com.frostsalix.eco_web_api.repository.OrderRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
@@ -66,7 +62,7 @@ public class OrderService {
         order.setUser(user);
         order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(totalPrice);
-        order.setStatus("PENDING");
+        order.setStatus(OrderStatus.PENDING);
 
         for (CartItem item : cartItems) {
 
@@ -114,6 +110,16 @@ public class OrderService {
                 .orElseThrow();
 
         return orderRepository.findByUser(user);
+    }
+
+    public Order updateStatus(Long orderId, OrderStatus status) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("订单不存在"));
+
+        order.setStatus(status);
+
+        return orderRepository.save(order);
     }
 
 }

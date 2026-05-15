@@ -24,7 +24,8 @@ public class Order {
     private LocalDateTime createdAt;
 
     @Setter
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
 
     @Setter
     @ManyToOne
