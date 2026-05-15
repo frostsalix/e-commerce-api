@@ -73,6 +73,34 @@ public class CartService {
         return cartItemRepository.findByUser(user);
     }
 
+    public CartItem updateQuantity(Long cartItemId, Integer quantity) {
+
+        String username = Objects.requireNonNull(SecurityContextHolder
+                        .getContext()
+                        .getAuthentication())
+                .getName();
+
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow();
+
+        CartItem cartItem = cartItemRepository
+                .findById(cartItemId)
+                .orElseThrow(() -> new RuntimeException("购物车项不存在"));
+
+        if (!cartItem.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("无权限修改");
+        }
+
+        if (quantity <= 0) {
+            throw new RuntimeException("数量必须大于0");
+        }
+
+        cartItem.setQuantity(quantity);
+
+        return cartItemRepository.save(cartItem);
+    }
+
     public void removeCartItem(Long cartItemId) {
 
         String username = Objects.requireNonNull(SecurityContextHolder
