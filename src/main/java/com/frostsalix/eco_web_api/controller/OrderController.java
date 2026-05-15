@@ -2,11 +2,9 @@ package com.frostsalix.eco_web_api.controller;
 
 import com.frostsalix.eco_web_api.common.ApiResponse;
 import com.frostsalix.eco_web_api.model.Order;
+import com.frostsalix.eco_web_api.model.OrderStatus;
 import com.frostsalix.eco_web_api.service.OrderService;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -35,6 +33,16 @@ public class OrderController {
 
         return ApiResponse.success(
                 orderService.getMyOrders()
+        );
+    }
+
+    @PutMapping("/{id}/status")
+    public ApiResponse<Order> updateStatus(
+            @PathVariable Long id,
+            @RequestParam OrderStatus status
+    ) {
+        return ApiResponse.success(
+                orderService.updateStatus(id, status)
         );
     }
 }
