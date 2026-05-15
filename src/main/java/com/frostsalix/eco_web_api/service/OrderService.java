@@ -5,10 +5,12 @@ import com.frostsalix.eco_web_api.repository.CartItemRepository;
 import com.frostsalix.eco_web_api.repository.OrderRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
 import com.frostsalix.eco_web_api.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,69 +34,59 @@ public class OrderService {
         this.productRepository = productRepository;
     }
 
+    @Transactional
     public Order createOrder() {
 
-        // 当前用户
-        String username = Objects.requireNonNull(SecurityContextHolder
-                        .getContext()
+        String username = Objects.requireNonNull(SecurityContextHolder.getContext()
                         .getAuthentication())
                 .getName();
 
-        User user = userRepository
-                .findByUsername(username)
-                .orElseThrow();
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("用户不存在"));
 
-        // 获取购物车
-        List<CartItem> cartItems =
-                cartItemRepository.findByUser(user);
+        List<CartItem> cartItems = cartItemRepository.findByUser(user);
 
         if (cartItems.isEmpty()) {
             throw new RuntimeException("购物车为空");
         }
 
-        // 计算总价
-        double totalPrice = 0;
-
-        // 创建订单
         Order order = new Order();
-
         order.setUser(user);
-        order.setCreatedAt(LocalDateTime.now());
-        order.setTotalPrice(totalPrice);
         order.setStatus(OrderStatus.PENDING);
+        order.setCreatedAt(LocalDateTime.now());
 
-        for (CartItem item : cartItems) {
+        double total = 0;
 
-            Product product = productRepository.findByIdForUpdate(item.getProduct().getId());
+        List<OrderItem> orderItems = new ArrayList<>();
 
-            if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException("库存不足");
+        for (CartItem cart : cartItems) {
+
+            Product product = productRepository.findById(cart.getProduct().getId())
+                    .orElseThrow(() -> new RuntimeException("商品不存在"));
+
+            if (product.getStock() < cart.getQuantity()) {
+                throw new RuntimeException("库存不足：" + product.getName());
             }
 
-            product.setStock(product.getStock() - item.getQuantity());
-            productRepository.save(product);
+            OrderItem item = new OrderItem();
+            item.setProductName(product.getName());
+            item.setProductPrice(product.getPrice());
+            item.setQuantity(cart.getQuantity());
+            item.setOrder(order);
 
-            totalPrice +=
-                    product.getPrice() * item.getQuantity();
+            orderItems.add(item);
 
-            OrderItem orderItem = new OrderItem();
-
-            orderItem.setProductName(product.getName());
-            orderItem.setProductPrice(product.getPrice());
-            orderItem.setQuantity(item.getQuantity());
-
-            orderItem.setOrder(order);
-
-            order.getItems().add(orderItem);
+            total += product.getPrice() * cart.getQuantity();
         }
 
-        order.setTotalPrice(totalPrice);
+        order.setItems(orderItems);
+        order.setTotalPrice(total);
 
-        Order savedOrder = orderRepository.save(order);
+        Order saved = orderRepository.save(order);
 
-        // 清空购物车
         cartItemRepository.deleteAll(cartItems);
-        return savedOrder;
+
+        return saved;
     }
 
     public List<Order> getMyOrders() {
