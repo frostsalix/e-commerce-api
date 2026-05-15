@@ -70,21 +70,15 @@ public class OrderService {
 
         for (CartItem item : cartItems) {
 
-            Product product = item.getProduct();
+            Product product = productRepository.findByIdForUpdate(item.getProduct().getId());
 
-            // 库存检查
             if (product.getStock() < item.getQuantity()) {
-                throw new RuntimeException(
-                        product.getName() + " 库存不足"
-                );
+                throw new RuntimeException("库存不足");
             }
 
-            // 扣库存
-            product.setStock(
-                    product.getStock() - item.getQuantity()
-            );
-
+            product.setStock(product.getStock() - item.getQuantity());
             productRepository.save(product);
+
             totalPrice +=
                     product.getPrice() * item.getQuantity();
 
