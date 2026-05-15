@@ -3,6 +3,7 @@ package com.frostsalix.eco_web_api.service;
 import com.frostsalix.eco_web_api.model.*;
 import com.frostsalix.eco_web_api.repository.OrderRepository;
 import com.frostsalix.eco_web_api.repository.PaymentRepository;
+import com.frostsalix.eco_web_api.repository.ProductRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -13,13 +14,15 @@ public class PaymentServiceImpl implements PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final ProductRepository productRepository;
 
     public PaymentServiceImpl(
             PaymentRepository paymentRepository,
-            OrderRepository orderRepository
+            OrderRepository orderRepository, ProductRepository productRepository
     ) {
         this.paymentRepository = paymentRepository;
         this.orderRepository = orderRepository;
+        this.productRepository = productRepository;
     }
 
     @Override
@@ -54,10 +57,36 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("订单状态不允许支付");
         }
 
+        // =========================
+        // 💥 核心：扣库存
+        // =========================
+        for (OrderItem item : order.getItems()) {
+
+            Product product = productRepository.findByIdForUpdate(
+                    item.getProduct().getId()
+            );
+
+            if (product.getStock() < item.getQuantity()) {
+                throw new RuntimeException("库存不足：" + product.getName());
+            }
+
+            product.setStock(
+                    product.getStock() - item.getQuantity()
+            );
+
+            productRepository.save(product);
+        }
+
+        // =========================
+        // 支付成功
+        // =========================
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
+        // =========================
+        // 更新订单
+        // =========================
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
     }

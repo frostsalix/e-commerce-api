@@ -5,7 +5,6 @@ import com.frostsalix.eco_web_api.repository.CartItemRepository;
 import com.frostsalix.eco_web_api.repository.OrderRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
 import com.frostsalix.eco_web_api.repository.UserRepository;
-import lombok.Setter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
