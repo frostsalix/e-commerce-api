@@ -53,7 +53,11 @@ public class UserService {
             throw new RuntimeException("Password incorrect");
         }
 
-        String token = JwtUtil.generateToken(user.getUsername());
+        String token =
+                JwtUtil.generateToken(
+                        user.getUsername(),
+                        user.getRole()
+                );
 
         return new LoginResponseDTO(token);
     }

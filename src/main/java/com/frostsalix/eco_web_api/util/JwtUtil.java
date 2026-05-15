@@ -16,12 +16,17 @@ public class JwtUtil {
     private static final Key KEY =
             Keys.hmacShaKeyFor(SECRET.getBytes());
 
-    public static String generateToken(String username) {
-
+    public static String generateToken(
+            String username,
+            String role
+    ) {
         return Jwts.builder()
                 .subject(username)
+                .claim("role", role)
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 3600000))
+                .expiration(
+                        new Date(System.currentTimeMillis() + 3600000)
+                )
                 .signWith(KEY, SignatureAlgorithm.HS256)
                 .compact();
     }
@@ -35,5 +40,16 @@ public class JwtUtil {
                 .parseSignedClaims(token)
                 .getPayload()
                 .getSubject();
+    }
+
+    // 添加解析 role 方法
+    public static String extractRole(String token) {
+
+        return Jwts.parser()
+                .verifyWith((SecretKey) KEY)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload()
+                .get("role", String.class);
     }
 }
