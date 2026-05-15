@@ -37,4 +37,14 @@ public class CartController {
                 cartService.getMyCart()
         );
     }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<String> removeCartItem(
+            @PathVariable Long id
+    ) {
+
+        cartService.removeCartItem(id);
+
+        return ApiResponse.success("删除成功");
+    }
 }
