@@ -2,6 +2,7 @@ package com.frostsalix.eco_web_api.model;
 
 import jakarta.persistence.*;
 import lombok.Getter;
+import lombok.Setter;
 
 @Getter
 @Entity
@@ -12,12 +13,15 @@ public class CartItem {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     private Integer quantity;
 
+    @Setter
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Setter
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;
@@ -25,15 +29,4 @@ public class CartItem {
     public CartItem() {
     }
 
-    public void setQuantity(Integer quantity) {
-        this.quantity = quantity;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public void setProduct(Product product) {
-        this.product = product;
-    }
 }
