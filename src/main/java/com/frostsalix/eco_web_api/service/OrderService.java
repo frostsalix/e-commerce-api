@@ -103,12 +103,28 @@ public class OrderService {
         return orderRepository.findByUser(user);
     }
 
-    public Order updateStatus(Long orderId, OrderStatus status) {
+    public Order updateStatus(Long orderId, OrderStatus targetStatus) {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new RuntimeException("订单不存在"));
 
-        order.setStatus(status);
+        OrderStatus current = order.getStatus();
+
+        boolean allowed = switch (current) {
+            case PENDING -> targetStatus == OrderStatus.PAID
+                    || targetStatus == OrderStatus.CANCELLED;
+            case PAID -> targetStatus == OrderStatus.SHIPPED
+                    || targetStatus == OrderStatus.CANCELLED;
+            case SHIPPED -> targetStatus == OrderStatus.DONE;
+            case CANCELLED, DONE -> false;
+        };
+
+        if (!allowed) {
+            throw new RuntimeException(
+                    "不允许从 " + current + " 转换到 " + targetStatus);
+        }
+
+        order.setStatus(targetStatus);
 
         return orderRepository.save(order);
     }
