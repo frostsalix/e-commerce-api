@@ -22,6 +22,10 @@ public class OrderItem {
     @Setter
     private Integer quantity;
 
+    @ManyToOne
+    @JoinColumn(name = "product_id")
+    private Product product;
+
     @JsonIgnore
     @Setter
     @ManyToOne

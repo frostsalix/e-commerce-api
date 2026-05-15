@@ -38,6 +38,16 @@ public class CartController {
         );
     }
 
+    @PutMapping("/{id}")
+    public ApiResponse<CartItem> updateQuantity(
+            @PathVariable Long id,
+            @RequestParam Integer quantity
+    ) {
+        return ApiResponse.success(
+                cartService.updateQuantity(id, quantity)
+        );
+    }
+
     @DeleteMapping("/{id}")
     public ApiResponse<String> removeCartItem(
             @PathVariable Long id
