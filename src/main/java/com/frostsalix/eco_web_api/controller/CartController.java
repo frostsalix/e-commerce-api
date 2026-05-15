@@ -4,9 +4,8 @@ import com.frostsalix.eco_web_api.common.ApiResponse;
 import com.frostsalix.eco_web_api.dto.AddToCartDTO;
 import com.frostsalix.eco_web_api.model.CartItem;
 import com.frostsalix.eco_web_api.service.CartService;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/cart")
@@ -31,10 +30,13 @@ public class CartController {
 
     // 查看我的购物车
     @GetMapping
-    public ApiResponse<List<CartItem>> getMyCart() {
+    public ApiResponse<Page<CartItem>> getMyCart(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
 
         return ApiResponse.success(
-                cartService.getMyCart()
+                cartService.getMyCart(page, size)
         );
     }
 
