@@ -22,6 +22,9 @@ public class Order {
     private LocalDateTime createdAt;
 
     @Setter
+    private String status;
+
+    @Setter
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
