@@ -6,6 +6,7 @@ import com.frostsalix.eco_web_api.dto.ProductResponseDTO;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.service.ProductService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,8 +27,16 @@ public class ProductController {
     }
 
     @GetMapping
-    public ApiResponse<List<ProductResponseDTO>> getAll() {
-        return ApiResponse.success(productService.getAllProducts());
+    public ApiResponse<Page<ProductResponseDTO>> getAll(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Double minPrice,
+            @RequestParam(required = false) Double maxPrice,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        return ApiResponse.success(
+                productService.searchProducts(keyword, minPrice, maxPrice, page, size)
+        );
     }
 
     @GetMapping("/{id}")
