@@ -7,6 +7,8 @@ import com.frostsalix.eco_web_api.dto.RegisterDTO;
 import com.frostsalix.eco_web_api.dto.UserResponseDTO;
 import com.frostsalix.eco_web_api.model.User;
 import com.frostsalix.eco_web_api.service.UserService;
+import com.frostsalix.eco_web_api.vo.UserVO;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -18,10 +20,17 @@ public class UserController {
 
     private final UserService userService;
 
-    @PostMapping("/register")
-    public ApiResponse<UserResponseDTO> register(@RequestBody @Valid RegisterDTO dto) {
+    private RegisterDTO dto;
 
-        return ApiResponse.success(userService.register(dto));
+    @PostMapping("/register")
+    public ApiResponse<UserResponseDTO> register(
+            @RequestBody @Valid RegisterDTO dto
+    ) {
+
+        UserResponseDTO user =
+                userService.register(dto);
+
+        return ApiResponse.success(user);
     }
 
     @PostMapping("/login")
