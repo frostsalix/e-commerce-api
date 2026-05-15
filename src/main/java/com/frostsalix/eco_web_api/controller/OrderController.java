@@ -36,6 +36,20 @@ public class OrderController {
         );
     }
 
+    @GetMapping("/{id}")
+    public ApiResponse<Order> getOrder(@PathVariable Long id) {
+        return ApiResponse.success(
+                orderService.getOrder(id)
+        );
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ApiResponse<Order> cancelOrder(@PathVariable Long id) {
+        return ApiResponse.success(
+                orderService.cancelOrder(id)
+        );
+    }
+
     @PutMapping("/{id}/status")
     public ApiResponse<Order> updateStatus(
             @PathVariable Long id,
