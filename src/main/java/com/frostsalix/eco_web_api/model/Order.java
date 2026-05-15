@@ -3,6 +3,8 @@ package com.frostsalix.eco_web_api.model;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.ArrayList;
+import java.util.List;
 
 import java.time.LocalDateTime;
 
@@ -28,6 +30,11 @@ public class Order {
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
+
+    @Setter
+    @OneToMany(mappedBy = "order",
+            cascade = CascadeType.ALL)
+    private List<OrderItem> items = new ArrayList<>();
 
     public Order() {
     }

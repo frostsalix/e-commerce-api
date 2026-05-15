@@ -4,10 +4,12 @@ import com.frostsalix.eco_web_api.model.CartItem;
 import com.frostsalix.eco_web_api.model.Order;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.model.User;
+import com.frostsalix.eco_web_api.model.OrderItem;
 import com.frostsalix.eco_web_api.repository.CartItemRepository;
 import com.frostsalix.eco_web_api.repository.OrderRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
 import com.frostsalix.eco_web_api.repository.UserRepository;
+import lombok.Setter;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -58,9 +60,18 @@ public class OrderService {
         // 计算总价
         double totalPrice = 0;
 
+        // 创建订单
+        Order order = new Order();
+
+        order.setUser(user);
+        order.setCreatedAt(LocalDateTime.now());
+        order.setTotalPrice(totalPrice);
+        order.setStatus("PENDING");
+
         for (CartItem item : cartItems) {
 
             Product product = item.getProduct();
+
             // 库存检查
             if (product.getStock() < item.getQuantity()) {
                 throw new RuntimeException(
@@ -76,21 +87,24 @@ public class OrderService {
             productRepository.save(product);
             totalPrice +=
                     product.getPrice() * item.getQuantity();
+
+            OrderItem orderItem = new OrderItem();
+
+            orderItem.setProductName(product.getName());
+            orderItem.setProductPrice(product.getPrice());
+            orderItem.setQuantity(item.getQuantity());
+
+            orderItem.setOrder(order);
+
+            order.getItems().add(orderItem);
         }
 
-        // 创建订单
-        Order order = new Order();
-
-        order.setUser(user);
-        order.setCreatedAt(LocalDateTime.now());
         order.setTotalPrice(totalPrice);
-        order.setStatus("PENDING");
 
         Order savedOrder = orderRepository.save(order);
 
         // 清空购物车
         cartItemRepository.deleteAll(cartItems);
-
         return savedOrder;
     }
 
