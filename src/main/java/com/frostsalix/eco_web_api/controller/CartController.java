@@ -9,11 +9,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.data.domain.Page;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/cart")
 @Tag(name = "购物车", description = "购物车增删改查")
+@Validated
 public class CartController {
 
     private final CartService cartService;
@@ -36,8 +38,8 @@ public class CartController {
     @GetMapping
     @Operation(summary = "查看我的购物车")
     public ApiResponse<Page<CartItem>> getMyCart(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size
     ) {
 
         return ApiResponse.success(

@@ -11,7 +11,8 @@
 
 Notes:
 - Project targets **Java 21** (`pom.xml` uses `<java.version>21</java.version>`).
-- Application expects local MySQL `ecommerce` at `127.0.0.1:3306` (see `src/main/resources/application.properties`).
+- Runtime now expects environment variables: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET`, `ALIPAY_NOTIFY_SIGN`.
+- For local MySQL workflow, point `DB_URL` to `jdbc:mysql://127.0.0.1:3306/ecommerce?useSSL=false&serverTimezone=UTC`.
 - There is currently **no dedicated lint/checkstyle/spotbugs command** configured in `pom.xml`.
 
 ## High-level architecture

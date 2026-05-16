@@ -10,14 +10,23 @@ import java.util.Date;
 
 public class JwtUtil {
 
-    private static final String SECRET =
-            System.getenv().getOrDefault(
-                    "JWT_SECRET",
-                    "01234567890123456789012345678901"
-            );
+    private static final String SECRET = requireJwtSecret();
 
     private static final Key KEY =
             Keys.hmacShaKeyFor(SECRET.getBytes());
+
+    private static String requireJwtSecret() {
+        String secret = System.getenv("JWT_SECRET");
+        if (secret == null || secret.isBlank()) {
+            throw new IllegalStateException("JWT_SECRET is required");
+        }
+        if (secret.length() < 32) {
+            throw new IllegalStateException(
+                    "JWT_SECRET must be at least 32 characters"
+            );
+        }
+        return secret;
+    }
 
     public static String generateToken(
             String username,

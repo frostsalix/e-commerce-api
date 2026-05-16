@@ -6,13 +6,17 @@ import com.frostsalix.eco_web_api.model.OrderStatus;
 import com.frostsalix.eco_web_api.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
 import org.springframework.data.domain.Page;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/orders")
 @Tag(name = "订单", description = "订单创建、查看、取消、发货、送达")
+@Validated
 public class OrderController {
 
     private final OrderService orderService;
@@ -33,8 +37,8 @@ public class OrderController {
     @GetMapping
     @Operation(summary = "查看我的订单")
     public ApiResponse<Page<Order>> getMyOrders(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @RequestParam(defaultValue = "20") @Min(1) int size
     ) {
 
         return ApiResponse.success(
@@ -75,7 +79,7 @@ public class OrderController {
     @Operation(summary = "发货（管理员）")
     public ApiResponse<Order> shipOrder(
             @PathVariable Long id,
-            @RequestParam String trackingNumber
+            @RequestParam @NotBlank String trackingNumber
     ) {
         return ApiResponse.success(
                 orderService.shipOrder(id, trackingNumber)
