@@ -9,10 +9,10 @@
 - [ ] JWT 有效期 1 小时，前端需处理过期（401）后跳转登录页
 - [ ] 分页参数统一：`page`（从 0 开始）、`size`
 - [ ] 分页响应结构：`{ code, message, data: { content: [...], totalPages, totalElements, number, size } }`
-- [ ] 环境变量（本地开发有默认值，无需设置）：
-  - `JWT_SECRET`（JWT 签名密钥，默认内嵌值）
-  - `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`（MySQL 连接，默认 127.0.0.1:3306/ecommerce）
-  - `ALIPAY_NOTIFY_SIGN`（支付宝回调验签，默认 `demo-sign`）
+- [ ] 环境变量（当前版本为必填）：
+  - `JWT_SECRET`（JWT 签名密钥，至少 32 字符）
+  - `DB_URL` / `DB_USERNAME` / `DB_PASSWORD`（MySQL 连接）
+  - `ALIPAY_NOTIFY_SIGN`（支付宝回调验签值）
 
 ## 1. 登录/注册页
 - [ ] `POST /users/register`：注册，body：`{ "username": "...", "password": "..." }`
@@ -67,8 +67,33 @@ PENDING ──→ PAID ──→ SHIPPED ──→ DONE
 - [ ] 后端回调接口：`POST /payment/webhook`（后端对后端，无需 Token）
 - [ ] 前端不直接调 webhook
 - [ ] 前端通过 `GET /orders/{id}` 判断是否 `PAID`
+- [ ] 回调幂等注意：同一 `outTradeNo` 仅用于一次成功流程；重复通知可能返回“订单状态不允许支付”
 
 ## 9. 错误码与提示策略
 - [ ] `code=200`：成功
 - [ ] `code=400`：参数校验失败（@Valid 触发），直接提示 `message`
 - [ ] `code=500`：运行时异常（含业务失败、权限不足、状态不允许等），直接提示 `message`
+- [ ] JWT 无效或缺失时，可能直接返回 HTTP `401`（不一定走 `ApiResponse` 包装）
+- [ ] 参数绑定失败（如路径变量格式错误）可能直接返回 HTTP `400`（容器层）
+
+## 10. 最小联调顺序（建议）
+1. 登录：`POST /users/login`，拿 `token`
+2. 商品：`GET /products` 选择商品
+3. 购物车：`POST /cart` 加入商品，`GET /cart` 确认
+4. 下单：`POST /orders`，拿 `orderId`
+5. 支付下单：`POST /payment/{orderId}/alipay`，拿 `outTradeNo`
+6. 支付结果：轮询 `GET /orders/{orderId}`，直到 `status === PAID`
+
+## 11. 字段字典（前端状态映射）
+- [ ] `OrderStatus`：`PENDING` / `PAID` / `SHIPPED` / `DONE` / `CANCELLED`
+- [ ] `PaymentStatus`：`PENDING` / `SUCCESS` / `REFUNDED`
+- [ ] `PaymentMethod`：`ALIPAY` / `COD`
+
+## 12. Postman 环境变量模板
+```text
+baseUrl=http://127.0.0.1:8080
+token=
+productId=
+orderId=
+outTradeNo=
+```
