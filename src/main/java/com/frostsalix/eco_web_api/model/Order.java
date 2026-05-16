@@ -28,6 +28,9 @@ public class Order {
     private OrderStatus status;
 
     @Setter
+    private String trackingNumber;
+
+    @Setter
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
