@@ -79,6 +79,7 @@ public class OrderService {
             item.setProductName(product.getName());
             item.setProductPrice(product.getPrice());
             item.setQuantity(cart.getQuantity());
+            item.setProduct(product);
             item.setOrder(order);
 
             orderItems.add(item);
