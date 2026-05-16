@@ -11,7 +11,10 @@ import java.util.Date;
 public class JwtUtil {
 
     private static final String SECRET =
-            "01234567890123456789012345678901";
+            System.getenv().getOrDefault(
+                    "JWT_SECRET",
+                    "01234567890123456789012345678901"
+            );
 
     private static final Key KEY =
             Keys.hmacShaKeyFor(SECRET.getBytes());

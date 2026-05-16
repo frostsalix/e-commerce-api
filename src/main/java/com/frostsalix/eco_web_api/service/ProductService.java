@@ -65,19 +65,15 @@ public class ProductService {
         return convertToDTO(product);
     }
 
-    public Product updateProduct(Long id, Product newProduct) {
+    public ProductResponseDTO updateProduct(Long id, ProductDTO dto) {
         Product product = productRepository.findById(id)
-                .orElse(null);
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        if (product == null) {
-            return null;
-        }
+        product.setName(dto.getName());
+        product.setPrice(dto.getPrice());
+        product.setStock(dto.getStock());
 
-        product.setName(newProduct.getName());
-        product.setPrice(newProduct.getPrice());
-        product.setStock(newProduct.getStock());
-
-        return productRepository.save(product);
+        return convertToDTO(productRepository.save(product));
     }
 
     public void deleteProduct(Long id) {
