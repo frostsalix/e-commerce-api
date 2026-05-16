@@ -7,6 +7,8 @@ import com.frostsalix.eco_web_api.repository.PaymentRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
 import com.frostsalix.eco_web_api.repository.UserRepository;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -105,6 +107,20 @@ public class OrderService {
                 .orElseThrow();
 
         return orderRepository.findByUser(user);
+    }
+
+    public Page<Order> getMyOrders(int page, int size) {
+
+        String username = Objects.requireNonNull(SecurityContextHolder
+                        .getContext()
+                        .getAuthentication())
+                .getName();
+
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow();
+
+        return orderRepository.findByUser(user, PageRequest.of(page, size));
     }
 
     public Order updateStatus(Long orderId, OrderStatus targetStatus) {

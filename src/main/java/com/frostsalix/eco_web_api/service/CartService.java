@@ -7,6 +7,8 @@ import com.frostsalix.eco_web_api.model.User;
 import com.frostsalix.eco_web_api.repository.CartItemRepository;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
 import com.frostsalix.eco_web_api.repository.UserRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
@@ -71,6 +73,20 @@ public class CartService {
                 .orElseThrow();
 
         return cartItemRepository.findByUser(user);
+    }
+
+    public Page<CartItem> getMyCart(int page, int size) {
+
+        String username = Objects.requireNonNull(SecurityContextHolder
+                        .getContext()
+                        .getAuthentication())
+                .getName();
+
+        User user = userRepository
+                .findByUsername(username)
+                .orElseThrow();
+
+        return cartItemRepository.findByUser(user, PageRequest.of(page, size));
     }
 
     public CartItem updateQuantity(Long cartItemId, Integer quantity) {

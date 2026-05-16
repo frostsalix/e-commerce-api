@@ -4,9 +4,8 @@ import com.frostsalix.eco_web_api.common.ApiResponse;
 import com.frostsalix.eco_web_api.model.Order;
 import com.frostsalix.eco_web_api.model.OrderStatus;
 import com.frostsalix.eco_web_api.service.OrderService;
+import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
@@ -29,10 +28,13 @@ public class OrderController {
 
     // 查看我的订单
     @GetMapping
-    public ApiResponse<List<Order>> getMyOrders() {
+    public ApiResponse<Page<Order>> getMyOrders(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
 
         return ApiResponse.success(
-                orderService.getMyOrders()
+                orderService.getMyOrders(page, size)
         );
     }
 

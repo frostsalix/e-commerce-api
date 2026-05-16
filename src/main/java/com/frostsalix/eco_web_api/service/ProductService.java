@@ -5,6 +5,10 @@ import com.frostsalix.eco_web_api.dto.ProductResponseDTO;
 import com.frostsalix.eco_web_api.exception.ResourceNotFoundException;
 import com.frostsalix.eco_web_api.model.Product;
 import com.frostsalix.eco_web_api.repository.ProductRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -36,6 +40,24 @@ public class ProductService {
                 .toList();
     }
 
+    public Page<ProductResponseDTO> searchProducts(
+            String keyword,
+            Double minPrice,
+            Double maxPrice,
+            int page,
+            int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        Specification<Product> specification = buildSearchSpecification(
+                keyword,
+                minPrice,
+                maxPrice
+        );
+
+        return productRepository.findAll(specification, pageable)
+                .map(this::convertToDTO);
+    }
+
     public ProductResponseDTO getProductById(Long id) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -60,6 +82,42 @@ public class ProductService {
 
     public void deleteProduct(Long id) {
         productRepository.deleteById(id);
+    }
+
+    private Specification<Product> buildSearchSpecification(
+            String keyword,
+            Double minPrice,
+            Double maxPrice
+    ) {
+        return (root, query, builder) -> {
+            var predicate = builder.conjunction();
+
+            if (keyword != null && !keyword.isBlank()) {
+                predicate = builder.and(
+                        predicate,
+                        builder.like(
+                                builder.lower(root.get("name")),
+                                "%" + keyword.toLowerCase() + "%"
+                        )
+                );
+            }
+
+            if (minPrice != null) {
+                predicate = builder.and(
+                        predicate,
+                        builder.greaterThanOrEqualTo(root.get("price"), minPrice)
+                );
+            }
+
+            if (maxPrice != null) {
+                predicate = builder.and(
+                        predicate,
+                        builder.lessThanOrEqualTo(root.get("price"), maxPrice)
+                );
+            }
+
+            return predicate;
+        };
     }
 
     private ProductResponseDTO convertToDTO(Product product) {

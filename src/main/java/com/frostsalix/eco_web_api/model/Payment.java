@@ -18,6 +18,10 @@ public class Payment {
     private Double amount;
     @Enumerated(EnumType.STRING)
     private PaymentStatus status;
+    @Enumerated(EnumType.STRING)
+    private PaymentMethod paymentMethod;
+    private String outTradeNo;
+    private String gatewayTradeNo;
     private LocalDateTime createdAt;
     private LocalDateTime paidAt;
 }

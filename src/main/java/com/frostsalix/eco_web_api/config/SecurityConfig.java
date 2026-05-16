@@ -30,7 +30,8 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 "/users/login",
-                                "/users/register"
+                                "/users/register",
+                                "/payment/webhook"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/products/**")
