@@ -5,12 +5,15 @@ import com.frostsalix.eco_web_api.model.*;
 import com.frostsalix.eco_web_api.service.AlipayCreateResponse;
 import com.frostsalix.eco_web_api.service.AlipayService;
 import com.frostsalix.eco_web_api.service.PaymentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
 @RestController
 @RequestMapping("/payment")
+@Tag(name = "支付", description = "支付单创建、支付确认、支付宝集成")
 public class PaymentController {
 
     private final PaymentService paymentService;
@@ -24,25 +27,22 @@ public class PaymentController {
         this.alipayService = alipayService;
     }
 
-    /**
-     * 创建支付单（状态为 PENDING，待后续确认支付）
-     */
     @PostMapping("/{orderId}")
+    @Operation(summary = "创建支付单")
     public ApiResponse<?> pay(@PathVariable Long orderId) {
         Payment payment = paymentService.createPayment(orderId);
         return ApiResponse.success(payment);
     }
 
-    /**
-     * 确认支付成功：扣库存、更新支付状态、更新订单状态
-     */
     @PutMapping("/{id}/success")
+    @Operation(summary = "确认支付成功")
     public ApiResponse<?> success(@PathVariable Long id) {
         paymentService.success(id);
         return ApiResponse.success("支付成功");
     }
 
     @PostMapping("/{orderId}/alipay")
+    @Operation(summary = "创建支付宝支付订单")
     public ApiResponse<AlipayCreateResponse> createAlipayOrder(
             @PathVariable Long orderId
     ) {
@@ -50,6 +50,7 @@ public class PaymentController {
     }
 
     @PostMapping("/webhook")
+    @Operation(summary = "支付宝异步通知回调")
     public ApiResponse<String> webhook(
             @RequestParam Map<String, String> params
     ) {

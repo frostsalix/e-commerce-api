@@ -57,9 +57,7 @@ public class PaymentServiceImpl implements PaymentService {
             throw new RuntimeException("订单状态不允许支付");
         }
 
-        // =========================
-        // 💥 核心：扣库存
-        // =========================
+        // 悲观锁扣库存
         for (OrderItem item : order.getItems()) {
 
             Product product = productRepository.findByIdForUpdate(
@@ -77,16 +75,10 @@ public class PaymentServiceImpl implements PaymentService {
             productRepository.save(product);
         }
 
-        // =========================
-        // 支付成功
-        // =========================
         payment.setStatus(PaymentStatus.SUCCESS);
         payment.setPaidAt(LocalDateTime.now());
         paymentRepository.save(payment);
 
-        // =========================
-        // 更新订单
-        // =========================
         order.setStatus(OrderStatus.PAID);
         orderRepository.save(order);
     }

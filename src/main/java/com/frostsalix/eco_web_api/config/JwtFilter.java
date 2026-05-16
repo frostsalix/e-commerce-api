@@ -14,11 +14,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 import java.util.Collections;
 
-//1. 从 Header 拿 token
-//2. 解析 JWT
-//3. 获取 username
-//4. 告诉 Spring：
-//“这个用户已经登录”
+// 从 Authorization 头提取 JWT，解析 claims，设置 SecurityContext
 public class JwtFilter extends OncePerRequestFilter {
 
     @Override
@@ -40,7 +36,6 @@ public class JwtFilter extends OncePerRequestFilter {
                         new SimpleGrantedAuthority("ROLE_" + role)
                 );
 
-                // JwtFilter读取 role
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 username,

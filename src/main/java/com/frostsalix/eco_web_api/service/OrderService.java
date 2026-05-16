@@ -40,6 +40,7 @@ public class OrderService {
         this.paymentRepository = paymentRepository;
     }
 
+    // 从购物车创建订单，仅校验库存（不扣减）
     @Transactional
     public Order createOrder() {
 
@@ -123,6 +124,7 @@ public class OrderService {
         return orderRepository.findByUser(user, PageRequest.of(page, size));
     }
 
+    // 订单状态机转换：PENDING→PAID/CANCELLED, PAID→SHIPPED/CANCELLED, SHIPPED→DONE
     public Order updateStatus(Long orderId, OrderStatus targetStatus) {
 
         Order order = orderRepository.findById(orderId)
@@ -149,6 +151,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    // 查看单个订单详情，校验归属
     public Order getOrder(Long orderId) {
 
         Order order = orderRepository.findById(orderId)
@@ -166,6 +169,7 @@ public class OrderService {
         return order;
     }
 
+    // 取消订单；若已支付则悲观锁回滚库存并退款
     @Transactional
     public Order cancelOrder(Long orderId) {
 
@@ -195,7 +199,6 @@ public class OrderService {
             throw new RuntimeException("已发货订单不可取消");
         }
 
-        // 已支付订单：回滚库存并退款
         if (current == OrderStatus.PAID) {
             for (OrderItem item : order.getItems()) {
                 Product product = productRepository.findByIdForUpdate(
@@ -217,6 +220,7 @@ public class OrderService {
         return order;
     }
 
+    // 填写物流单号，PAID → SHIPPED（管理员）
     public Order shipOrder(Long orderId, String trackingNumber) {
 
         Order order = orderRepository.findById(orderId)
@@ -232,6 +236,7 @@ public class OrderService {
         return orderRepository.save(order);
     }
 
+    // 确认送达，SHIPPED → DONE（管理员）
     public Order deliverOrder(Long orderId) {
 
         Order order = orderRepository.findById(orderId)

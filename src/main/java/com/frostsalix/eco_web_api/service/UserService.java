@@ -18,6 +18,7 @@ public class UserService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
+    // 用户注册，BCrypt 加密密码，默认角色 USER
     public UserResponseDTO register(RegisterDTO dto) {
 
         User user = new User();
@@ -39,6 +40,7 @@ public class UserService {
         return response;
     }
 
+    // 登录校验，返回 JWT token
     public LoginResponseDTO login(LoginDTO dto) {
 
         User user = userRepository.findByUsername(dto.getUsername())
