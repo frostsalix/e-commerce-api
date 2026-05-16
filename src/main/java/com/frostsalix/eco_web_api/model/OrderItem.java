@@ -22,6 +22,7 @@ public class OrderItem {
     @Setter
     private Integer quantity;
 
+    @Setter
     @ManyToOne
     @JoinColumn(name = "product_id")
     private Product product;

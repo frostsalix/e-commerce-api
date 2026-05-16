@@ -1,7 +1,12 @@
 package com.frostsalix.eco_web_api.service;
 
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.frostsalix.eco_web_api.model.Payment;
 import com.frostsalix.eco_web_api.model.PaymentMethod;
+import com.frostsalix.eco_web_api.model.PaymentStatus;
 import com.frostsalix.eco_web_api.repository.PaymentRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,8 +20,10 @@ import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyMap;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class AlipayServiceTest {
@@ -25,9 +32,13 @@ class AlipayServiceTest {
     private PaymentService paymentService;
     @Mock
     private PaymentRepository paymentRepository;
+    @Mock
+    private AlipaySignatureVerifier alipaySignatureVerifier;
 
     @InjectMocks
     private AlipayService alipayService;
+
+    // ── 9.1.1 createAlipayOrder ──
 
     @Test
     void shouldCreateAlipayOrderPayload() {
@@ -42,7 +53,7 @@ class AlipayServiceTest {
         AlipayCreateResponse response = alipayService.createAlipayOrder(12L);
 
         assertThat(response.paymentId()).isEqualTo(7L);
-        assertThat(response.payUrl()).contains("https://openapi.alipay.test/pay");
+        assertThat(response.payForm()).contains("https://openapi.alipay.test/pay");
         assertThat(response.outTradeNo()).isNotBlank();
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
         verify(paymentRepository).save(captor.capture());
@@ -50,12 +61,65 @@ class AlipayServiceTest {
         assertThat(captor.getValue().getOutTradeNo()).isNotBlank();
     }
 
+    // ── 9.1.0 真实 SDK pageExecute ──
+
+    @Test
+    void shouldUseRealSdkWhenCredentialsConfigured() throws AlipayApiException {
+        Payment payment = new Payment();
+        payment.setId(7L);
+        payment.setAmount(88.0);
+        when(paymentService.createPayment(12L)).thenReturn(payment);
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        AlipayClient mockClient = mock(AlipayClient.class);
+        AlipayTradePagePayResponse sdkResponse = mock(AlipayTradePagePayResponse.class);
+        when(sdkResponse.isSuccess()).thenReturn(true);
+        when(sdkResponse.getBody()).thenReturn("<form>alipay pay form</form>");
+        when(mockClient.pageExecute(any(AlipayTradePagePayRequest.class))).thenReturn(sdkResponse);
+
+        ReflectionTestUtils.setField(alipayService, "appId", "2021006154601583");
+        ReflectionTestUtils.setField(alipayService, "privateKey", "mock-private-key");
+        ReflectionTestUtils.setField(alipayService, "alipayPublicKey", "mock-public-key");
+        ReflectionTestUtils.setField(alipayService, "alipayClient", mockClient);
+
+        AlipayCreateResponse response = alipayService.createAlipayOrder(12L);
+
+        assertThat(response.payForm()).isEqualTo("<form>alipay pay form</form>");
+        verify(mockClient).pageExecute(any(AlipayTradePagePayRequest.class));
+    }
+
+    @Test
+    void shouldThrowWhenSdkPageExecuteFails() throws AlipayApiException {
+        Payment payment = new Payment();
+        payment.setId(7L);
+        payment.setAmount(88.0);
+        when(paymentService.createPayment(12L)).thenReturn(payment);
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        AlipayClient mockClient = mock(AlipayClient.class);
+        AlipayTradePagePayResponse sdkResponse = mock(AlipayTradePagePayResponse.class);
+        when(sdkResponse.isSuccess()).thenReturn(false);
+        when(sdkResponse.getCode()).thenReturn("40004");
+        when(sdkResponse.getMsg()).thenReturn("Business Failed");
+        when(mockClient.pageExecute(any(AlipayTradePagePayRequest.class))).thenReturn(sdkResponse);
+
+        ReflectionTestUtils.setField(alipayService, "appId", "2021006154601583");
+        ReflectionTestUtils.setField(alipayService, "privateKey", "mock-private-key");
+        ReflectionTestUtils.setField(alipayService, "alipayPublicKey", "mock-public-key");
+        ReflectionTestUtils.setField(alipayService, "alipayClient", mockClient);
+
+        assertThatThrownBy(() -> alipayService.createAlipayOrder(12L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("支付宝下单失败");
+    }
+
+    // ── 9.1.2 回调验签 ──
+
     @Test
     void shouldConfirmPaymentWhenWebhookIsSuccessful() {
-        ReflectionTestUtils.setField(alipayService, "notifySign", "demo-sign");
-
         Payment payment = new Payment();
         payment.setId(9L);
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
         when(paymentRepository.findByOutTradeNo("OUT-001")).thenReturn(Optional.of(payment));
 
         alipayService.handleWebhook(Map.of(
@@ -66,5 +130,176 @@ class AlipayServiceTest {
         ));
 
         verify(paymentService).success(9L);
+    }
+
+    @Test
+    void shouldRejectWebhookWhenSignatureVerificationFails() {
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(false);
+
+        assertThatThrownBy(() -> alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "bad-sign"
+        ))).isInstanceOf(RuntimeException.class)
+                .hasMessage("支付宝验签失败");
+    }
+
+    @Test
+    void shouldRejectWebhookWhenOutTradeNoMissing() {
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+
+        assertThatThrownBy(() -> alipayService.handleWebhook(Map.of(
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ))).isInstanceOf(RuntimeException.class)
+                .hasMessage("缺少 out_trade_no");
+    }
+
+    @Test
+    void shouldRejectWebhookWhenOutTradeNoBlank() {
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+
+        assertThatThrownBy(() -> alipayService.handleWebhook(Map.of(
+                "out_trade_no", "  ",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ))).isInstanceOf(RuntimeException.class)
+                .hasMessage("缺少 out_trade_no");
+    }
+
+    @Test
+    void shouldRejectWebhookWhenTradeStatusNotSuccess() {
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+
+        assertThatThrownBy(() -> alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_CLOSED",
+                "sign", "demo-sign"
+        ))).isInstanceOf(RuntimeException.class)
+                .hasMessage("交易未成功");
+    }
+
+    @Test
+    void shouldAcceptWebhookWhenTradeFinished() {
+        Payment payment = new Payment();
+        payment.setId(10L);
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+        when(paymentRepository.findByOutTradeNo("OUT-001")).thenReturn(Optional.of(payment));
+
+        alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-002",
+                "trade_status", "TRADE_FINISHED",
+                "sign", "demo-sign"
+        ));
+
+        verify(paymentService).success(10L);
+    }
+
+    // ── 9.1.3 回调幂等 ──
+
+    @Test
+    void shouldSkipSuccessWhenPaymentAlreadySuccessful() {
+        Payment payment = new Payment();
+        payment.setId(9L);
+        payment.setStatus(PaymentStatus.SUCCESS);
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+        when(paymentRepository.findByOutTradeNo("OUT-001")).thenReturn(Optional.of(payment));
+
+        alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ));
+
+        // 幂等：不重复调用 success
+        verify(paymentService, never()).success(anyLong());
+    }
+
+    @Test
+    void shouldNotDeductStockTwiceOnDuplicateWebhook() {
+        Payment payment = new Payment();
+        payment.setId(9L);
+        when(alipaySignatureVerifier.verify(anyMap())).thenReturn(true);
+        when(paymentRepository.findByOutTradeNo("OUT-001")).thenReturn(Optional.of(payment));
+
+        // 第一次回调
+        alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ));
+        verify(paymentService).success(9L);
+
+        // payment 已成功
+        payment.setStatus(PaymentStatus.SUCCESS);
+
+        // 第二次回调（幂等）
+        alipayService.handleWebhook(Map.of(
+                "out_trade_no", "OUT-001",
+                "trade_no", "ALI-TRADE-001",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ));
+
+        // success 总共只调用一次
+        verify(paymentService, times(1)).success(9L);
+    }
+
+    // ── 9.1.4 主动查单 ──
+
+    @Test
+    void shouldQueryOrderByOutTradeNo() {
+        Payment payment = new Payment();
+        payment.setId(11L);
+        payment.setOutTradeNo("OUT-002");
+        payment.setStatus(PaymentStatus.SUCCESS);
+        when(paymentRepository.findByOutTradeNo("OUT-002")).thenReturn(Optional.of(payment));
+
+        Payment result = alipayService.queryOrder("OUT-002");
+
+        assertThat(result.getId()).isEqualTo(11L);
+        assertThat(result.getOutTradeNo()).isEqualTo("OUT-002");
+        assertThat(result.getStatus()).isEqualTo(PaymentStatus.SUCCESS);
+    }
+
+    @Test
+    void shouldThrowWhenQueryOrderNotFound() {
+        when(paymentRepository.findByOutTradeNo("UNKNOWN")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> alipayService.queryOrder("UNKNOWN"))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("支付单不存在");
+    }
+
+    // ── 签名验证实现 ──
+
+    @Test
+    void shouldVerifyWithFallbackWhenPublicKeyNotConfigured() {
+        AlipaySignatureVerifierImpl verifier = new AlipaySignatureVerifierImpl();
+        ReflectionTestUtils.setField(verifier, "alipayPublicKey", "");
+        ReflectionTestUtils.setField(verifier, "fallbackNotifySign", "demo-sign");
+        ReflectionTestUtils.setField(verifier, "charset", "utf-8");
+        ReflectionTestUtils.setField(verifier, "signType", "RSA2");
+
+        assertThat(verifier.verify(Map.of("sign", "demo-sign"))).isTrue();
+        assertThat(verifier.verify(Map.of("sign", "bad-sign"))).isFalse();
+    }
+
+    @Test
+    void shouldRejectWhenNoSignInParams() {
+        AlipaySignatureVerifierImpl verifier = new AlipaySignatureVerifierImpl();
+        ReflectionTestUtils.setField(verifier, "alipayPublicKey", "");
+        ReflectionTestUtils.setField(verifier, "fallbackNotifySign", "demo-sign");
+        ReflectionTestUtils.setField(verifier, "charset", "utf-8");
+        ReflectionTestUtils.setField(verifier, "signType", "RSA2");
+
+        assertThat(verifier.verify(Map.of())).isFalse();
     }
 }
