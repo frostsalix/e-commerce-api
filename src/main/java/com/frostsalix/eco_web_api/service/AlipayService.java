@@ -16,19 +16,19 @@ public class AlipayService {
 
     private final PaymentService paymentService;
     private final PaymentRepository paymentRepository;
+    private final AlipaySignatureVerifier alipaySignatureVerifier;
 
     @Value("${alipay.gateway-url:https://openapi.alipay.com/gateway.do}")
     private String gatewayUrl;
 
-    @Value("${alipay.notify-sign:demo-sign}")
-    private String notifySign;
-
     public AlipayService(
             PaymentService paymentService,
-            PaymentRepository paymentRepository
+            PaymentRepository paymentRepository,
+            AlipaySignatureVerifier alipaySignatureVerifier
     ) {
         this.paymentService = paymentService;
         this.paymentRepository = paymentRepository;
+        this.alipaySignatureVerifier = alipaySignatureVerifier;
     }
 
     // 创建支付宝支付订单，生成 outTradeNo 并返回支付 URL
@@ -55,8 +55,7 @@ public class AlipayService {
 
     // 处理支付宝异步通知回调，验签后触发支付成功
     public void handleWebhook(Map<String, String> params) {
-        String sign = params.get("sign");
-        if (sign == null || !sign.equals(notifySign)) {
+        if (!alipaySignatureVerifier.verify(params)) {
             throw new RuntimeException("支付宝验签失败");
         }
 
