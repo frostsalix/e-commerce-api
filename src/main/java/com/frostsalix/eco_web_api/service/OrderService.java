@@ -195,7 +195,7 @@ public class OrderService {
             throw new RuntimeException("已发货订单不可取消");
         }
 
-        // 已支付订单：回滚库存
+        // 已支付订单：回滚库存并退款
         if (current == OrderStatus.PAID) {
             for (OrderItem item : order.getItems()) {
                 Product product = productRepository.findByIdForUpdate(
@@ -204,12 +204,46 @@ public class OrderService {
                 product.setStock(product.getStock() + item.getQuantity());
                 productRepository.save(product);
             }
+
+            Payment payment = paymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("支付单不存在"));
+            payment.setStatus(PaymentStatus.REFUNDED);
+            paymentRepository.save(payment);
         }
 
         order.setStatus(OrderStatus.CANCELLED);
         orderRepository.save(order);
 
         return order;
+    }
+
+    public Order shipOrder(Long orderId, String trackingNumber) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("订单不存在"));
+
+        if (order.getStatus() != OrderStatus.PAID) {
+            throw new RuntimeException("仅已支付订单可发货");
+        }
+
+        order.setTrackingNumber(trackingNumber);
+        order.setStatus(OrderStatus.SHIPPED);
+
+        return orderRepository.save(order);
+    }
+
+    public Order deliverOrder(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("订单不存在"));
+
+        if (order.getStatus() != OrderStatus.SHIPPED) {
+            throw new RuntimeException("仅已发货订单可确认送达");
+        }
+
+        order.setStatus(OrderStatus.DONE);
+
+        return orderRepository.save(order);
     }
 
 }

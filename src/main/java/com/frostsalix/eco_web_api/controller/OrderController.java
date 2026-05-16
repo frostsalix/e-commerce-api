@@ -61,4 +61,21 @@ public class OrderController {
                 orderService.updateStatus(id, status)
         );
     }
+
+    @PutMapping("/{id}/ship")
+    public ApiResponse<Order> shipOrder(
+            @PathVariable Long id,
+            @RequestParam String trackingNumber
+    ) {
+        return ApiResponse.success(
+                orderService.shipOrder(id, trackingNumber)
+        );
+    }
+
+    @PutMapping("/{id}/deliver")
+    public ApiResponse<Order> deliverOrder(@PathVariable Long id) {
+        return ApiResponse.success(
+                orderService.deliverOrder(id)
+        );
+    }
 }
