@@ -57,4 +57,12 @@ public class PaymentController {
         alipayService.handleWebhook(params);
         return ApiResponse.success("回调处理成功");
     }
+
+    @GetMapping("/query")
+    @Operation(summary = "按 outTradeNo 查询支付状态")
+    public ApiResponse<Payment> queryPayment(
+            @RequestParam String outTradeNo
+    ) {
+        return ApiResponse.success(alipayService.queryOrder(outTradeNo));
+    }
 }
