@@ -1,5 +1,9 @@
 package com.frostsalix.eco_web_api.service;
 
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.request.AlipayTradePagePayRequest;
+import com.alipay.api.response.AlipayTradePagePayResponse;
 import com.frostsalix.eco_web_api.model.Payment;
 import com.frostsalix.eco_web_api.model.PaymentMethod;
 import com.frostsalix.eco_web_api.model.PaymentStatus;
@@ -17,6 +21,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.Mockito.*;
 
@@ -48,12 +53,64 @@ class AlipayServiceTest {
         AlipayCreateResponse response = alipayService.createAlipayOrder(12L);
 
         assertThat(response.paymentId()).isEqualTo(7L);
-        assertThat(response.payUrl()).contains("https://openapi.alipay.test/pay");
+        assertThat(response.payForm()).contains("https://openapi.alipay.test/pay");
         assertThat(response.outTradeNo()).isNotBlank();
         ArgumentCaptor<Payment> captor = ArgumentCaptor.forClass(Payment.class);
         verify(paymentRepository).save(captor.capture());
         assertThat(captor.getValue().getPaymentMethod()).isEqualTo(PaymentMethod.ALIPAY);
         assertThat(captor.getValue().getOutTradeNo()).isNotBlank();
+    }
+
+    // ── 9.1.0 真实 SDK pageExecute ──
+
+    @Test
+    void shouldUseRealSdkWhenCredentialsConfigured() throws AlipayApiException {
+        Payment payment = new Payment();
+        payment.setId(7L);
+        payment.setAmount(88.0);
+        when(paymentService.createPayment(12L)).thenReturn(payment);
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        AlipayClient mockClient = mock(AlipayClient.class);
+        AlipayTradePagePayResponse sdkResponse = mock(AlipayTradePagePayResponse.class);
+        when(sdkResponse.isSuccess()).thenReturn(true);
+        when(sdkResponse.getBody()).thenReturn("<form>alipay pay form</form>");
+        when(mockClient.pageExecute(any(AlipayTradePagePayRequest.class))).thenReturn(sdkResponse);
+
+        ReflectionTestUtils.setField(alipayService, "appId", "2021006154601583");
+        ReflectionTestUtils.setField(alipayService, "privateKey", "mock-private-key");
+        ReflectionTestUtils.setField(alipayService, "alipayPublicKey", "mock-public-key");
+        ReflectionTestUtils.setField(alipayService, "alipayClient", mockClient);
+
+        AlipayCreateResponse response = alipayService.createAlipayOrder(12L);
+
+        assertThat(response.payForm()).isEqualTo("<form>alipay pay form</form>");
+        verify(mockClient).pageExecute(any(AlipayTradePagePayRequest.class));
+    }
+
+    @Test
+    void shouldThrowWhenSdkPageExecuteFails() throws AlipayApiException {
+        Payment payment = new Payment();
+        payment.setId(7L);
+        payment.setAmount(88.0);
+        when(paymentService.createPayment(12L)).thenReturn(payment);
+        when(paymentRepository.save(payment)).thenReturn(payment);
+
+        AlipayClient mockClient = mock(AlipayClient.class);
+        AlipayTradePagePayResponse sdkResponse = mock(AlipayTradePagePayResponse.class);
+        when(sdkResponse.isSuccess()).thenReturn(false);
+        when(sdkResponse.getCode()).thenReturn("40004");
+        when(sdkResponse.getMsg()).thenReturn("Business Failed");
+        when(mockClient.pageExecute(any(AlipayTradePagePayRequest.class))).thenReturn(sdkResponse);
+
+        ReflectionTestUtils.setField(alipayService, "appId", "2021006154601583");
+        ReflectionTestUtils.setField(alipayService, "privateKey", "mock-private-key");
+        ReflectionTestUtils.setField(alipayService, "alipayPublicKey", "mock-public-key");
+        ReflectionTestUtils.setField(alipayService, "alipayClient", mockClient);
+
+        assertThatThrownBy(() -> alipayService.createAlipayOrder(12L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("支付宝下单失败");
     }
 
     // ── 9.1.2 回调验签 ──

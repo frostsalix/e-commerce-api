@@ -38,9 +38,9 @@
 - [ ] 失败提示处理：库存不足 / 购物车为空
 
 ## 5. 支付页（支付宝 Mock）
-- [ ] `POST /payment/{orderId}/alipay`：创建支付宝支付单，返回 `{ paymentId, outTradeNo, payUrl }`
-- [ ] ⚠️ 当前为 Mock 实现：`payUrl` 是本地拼接字符串，非真实支付宝跳转
-- [ ] 前端跳转 `payUrl`（真实对接时替换为支付宝 SDK）
+- [ ] `POST /payment/{orderId}/alipay`：创建支付宝支付单，返回 `{ paymentId, outTradeNo, payForm }`
+- [ ] 凭证未配置时为 Mock 实现：`payForm` 是本地拼接 URL；配置后为支付宝 SDK `pageExecute` 生成的 HTML 表单
+- [ ] 前端渲染 `payForm`（Mock 时跳转 URL，生产时将 HTML 插入页面自动跳转支付宝）
 - [ ] 支付后回到前端结果页，通过 `GET /orders/{id}` 轮询判断 `status === "PAID"`
 
 ## 6. 订单页
