@@ -32,32 +32,27 @@ public class CartService {
         this.userRepository = userRepository;
     }
 
+    // 添加商品到当前用户购物车
     public CartItem addToCart(AddToCartDTO dto) {
 
-        // 1. 获取当前登录用户名
         String username = Objects.requireNonNull(SecurityContextHolder
                         .getContext()
                         .getAuthentication())
                 .getName();
 
-        // 2. 查数据库用户
         User user = userRepository
                 .findByUsername(username)
                 .orElseThrow();
 
-        // 3. 查商品
         Product product = productRepository
                 .findById(dto.getProductId())
                 .orElseThrow();
 
-        // 4. 创建购物车项
         CartItem cartItem = new CartItem();
-
         cartItem.setUser(user);
         cartItem.setProduct(product);
         cartItem.setQuantity(dto.getQuantity());
 
-        // 5. 保存
         return cartItemRepository.save(cartItem);
     }
 
@@ -89,6 +84,7 @@ public class CartService {
         return cartItemRepository.findByUser(user, PageRequest.of(page, size));
     }
 
+    // 更新购物车商品数量，校验归属
     public CartItem updateQuantity(Long cartItemId, Integer quantity) {
 
         String username = Objects.requireNonNull(SecurityContextHolder
@@ -117,6 +113,7 @@ public class CartService {
         return cartItemRepository.save(cartItem);
     }
 
+    // 删除购物车项，校验归属
     public void removeCartItem(Long cartItemId) {
 
         String username = Objects.requireNonNull(SecurityContextHolder
@@ -132,7 +129,6 @@ public class CartService {
                 .findById(cartItemId)
                 .orElseThrow();
 
-        // 防止删除别人购物车
         if (!cartItem.getUser().getId().equals(user.getId())) {
             throw new RuntimeException("无权限删除");
         }

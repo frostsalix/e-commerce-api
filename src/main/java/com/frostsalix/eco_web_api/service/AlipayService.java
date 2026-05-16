@@ -31,6 +31,7 @@ public class AlipayService {
         this.paymentRepository = paymentRepository;
     }
 
+    // 创建支付宝支付订单，生成 outTradeNo 并返回支付 URL
     public AlipayCreateResponse createAlipayOrder(Long orderId) {
         Payment payment = paymentService.createPayment(orderId);
         String outTradeNo = "ALI-" + UUID.randomUUID();
@@ -52,6 +53,7 @@ public class AlipayService {
         );
     }
 
+    // 处理支付宝异步通知回调，验签后触发支付成功
     public void handleWebhook(Map<String, String> params) {
         String sign = params.get("sign");
         if (sign == null || !sign.equals(notifySign)) {

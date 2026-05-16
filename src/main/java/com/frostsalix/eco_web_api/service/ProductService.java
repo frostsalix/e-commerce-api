@@ -22,6 +22,7 @@ public class ProductService {
         this.productRepository = productRepository;
     }
 
+    // 新增商品（管理员）
     public ProductResponseDTO addProduct(ProductDTO dto) {
 
         Product product = new Product();
@@ -40,6 +41,7 @@ public class ProductService {
                 .toList();
     }
 
+    // 搜索商品：关键词模糊匹配 + 价格区间 + 分页
     public Page<ProductResponseDTO> searchProducts(
             String keyword,
             Double minPrice,
@@ -65,6 +67,7 @@ public class ProductService {
         return convertToDTO(product);
     }
 
+    // 更新商品信息（管理员）
     public ProductResponseDTO updateProduct(Long id, ProductDTO dto) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
@@ -76,6 +79,7 @@ public class ProductService {
         return convertToDTO(productRepository.save(product));
     }
 
+    // 删除商品（管理员）
     public void deleteProduct(Long id) {
         productRepository.deleteById(id);
     }
