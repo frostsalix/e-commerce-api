@@ -12,6 +12,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doNothing;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentControllerTest {
@@ -37,5 +38,19 @@ class PaymentControllerTest {
         assertThat(result.getData()).isNotNull();
         assertThat(result.getData().getId()).isEqualTo(3L);
         assertThat(result.getData().getOutTradeNo()).isEqualTo("OUT-100");
+    }
+
+    @Test
+    void shouldReturnPlainSuccessForWebhook() {
+        doNothing().when(alipayService).handleWebhook(org.mockito.ArgumentMatchers.anyMap());
+
+        String result = paymentController.webhook(java.util.Map.of(
+                "out_trade_no", "OUT-200",
+                "trade_no", "ALI-TEST-200",
+                "trade_status", "TRADE_SUCCESS",
+                "sign", "demo-sign"
+        ));
+
+        assertThat(result).isEqualTo("success");
     }
 }

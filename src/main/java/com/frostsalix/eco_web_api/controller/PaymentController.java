@@ -51,11 +51,11 @@ public class PaymentController {
 
     @PostMapping("/webhook")
     @Operation(summary = "支付宝异步通知回调")
-    public ApiResponse<String> webhook(
+    public String webhook(
             @RequestParam Map<String, String> params
     ) {
         alipayService.handleWebhook(params);
-        return ApiResponse.success("回调处理成功");
+        return "success";
     }
 
     @GetMapping("/query")
