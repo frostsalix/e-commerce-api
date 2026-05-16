@@ -10,7 +10,7 @@
 - **Run a single test method:** `.\mvnw.cmd -Dtest=EcoWebApiApplicationTests#contextLoads test`
 
 Notes:
-- Project targets **Java 25** (`pom.xml` uses `<java.version>25</java.version>`).
+- Project targets **Java 21** (`pom.xml` uses `<java.version>21</java.version>`).
 - Application expects local MySQL `ecommerce` at `127.0.0.1:3306` (see `src/main/resources/application.properties`).
 - There is currently **no dedicated lint/checkstyle/spotbugs command** configured in `pom.xml`.
 
