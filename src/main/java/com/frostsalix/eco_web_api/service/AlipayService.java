@@ -2,6 +2,7 @@ package com.frostsalix.eco_web_api.service;
 
 import com.frostsalix.eco_web_api.model.Payment;
 import com.frostsalix.eco_web_api.model.PaymentMethod;
+import com.frostsalix.eco_web_api.model.PaymentStatus;
 import com.frostsalix.eco_web_api.repository.PaymentRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -73,9 +74,20 @@ public class AlipayService {
         Payment payment = paymentRepository.findByOutTradeNo(outTradeNo)
                 .orElseThrow(() -> new RuntimeException("支付单不存在"));
 
+        // 幂等：已成功的回调直接返回，避免重复扣库存
+        if (payment.getStatus() == PaymentStatus.SUCCESS) {
+            return;
+        }
+
         payment.setGatewayTradeNo(params.get("trade_no"));
         paymentRepository.save(payment);
 
         paymentService.success(payment.getId());
+    }
+
+    // 主动查单：按 outTradeNo 查询本地支付状态，用于补偿兜底
+    public Payment queryOrder(String outTradeNo) {
+        return paymentRepository.findByOutTradeNo(outTradeNo)
+                .orElseThrow(() -> new RuntimeException("支付单不存在"));
     }
 }
