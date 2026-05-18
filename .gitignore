@@ -34,3 +34,39 @@ build/
 
 ### Claude Code ###
 .claude/
+
+### OS ###
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+### Environment & Secrets ###
+.env
+.env.*
+!env.example
+application-local.properties
+application-dev.properties
+application-secret.properties
+*.pem
+*.key
+*.pfx
+*.jks
+
+### Logs ###
+*.log
+log/
+
+### Temp & Build ###
+*.tmp
+*.swp
+*.swo
+*~
+*.jar
+*.war
+*.ear
+dependency-reduced-pom.xml
+
+### Packages ###
+*.zip
+*.tar.gz
+*.rar

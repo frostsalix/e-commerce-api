@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Eco Shop Admin</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/products">Products</a>
+            <a href="/admin/orders">Orders</a>
+            <a href="/admin/users" class="active">Users</a>
+        </div>
+        <a href="/admin/logout" class="nav-logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Users</h1>
+
+        <div th:if="${success}" class="alert alert-success">
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error">
+            <span th:text="${error}"></span>
+        </div>
+
+        <div th:if="${!users.isEmpty()}">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="user : ${users}">
+                        <td th:text="${user.id}"></td>
+                        <td th:text="${user.username}"></td>
+                        <td><span class="status" th:class="${user.role == 'ADMIN'} ? 'status status-PAID' : 'status status-PENDING'" th:text="${user.role}"></span></td>
+                        <td class="actions">
+                            <th:block th:if="${user.role == 'USER'}">
+                                <form th:action="@{/admin/users/{id}/role(id=${user.id})}"
+                                      method="post" style="display:inline">
+                                    <input type="hidden" name="role" value="ADMIN">
+                                    <button type="submit" class="btn btn-sm btn-primary">Promote to Admin</button>
+                                </form>
+                            </th:block>
+                            <th:block th:if="${user.role == 'ADMIN'}">
+                                <form th:action="@{/admin/users/{id}/role(id=${user.id})}"
+                                      method="post" style="display:inline"
+                                      onsubmit="return confirm('Demote this admin to USER?')">
+                                    <input type="hidden" name="role" value="USER">
+                                    <button type="submit" class="btn btn-sm btn-secondary">Demote</button>
+                                </form>
+                            </th:block>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination" th:if="${totalPages > 1}">
+                <a th:if="${currentPage > 0}"
+                   th:href="@{/admin/users(page=${currentPage - 1})}" class="btn btn-sm">Prev</a>
+                <span>Page [[${currentPage + 1}]] / [[${totalPages}]]</span>
+                <a th:if="${currentPage < totalPages - 1}"
+                   th:href="@{/admin/users(page=${currentPage + 1})}" class="btn btn-sm">Next</a>
+            </div>
+        </div>
+
+        <p th:if="${users.isEmpty()}" class="empty-state">No users yet.</p>
+    </main>
+</body>
+</html>

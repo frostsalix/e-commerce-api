@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - Eco Shop Admin</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/products" class="active">Products</a>
+            <a href="/admin/orders">Orders</a>
+            <a href="/admin/users">Users</a>
+        </div>
+        <a href="/admin/logout" class="nav-logout">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Products</h1>
+
+        <div th:if="${success}" class="alert alert-success">
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error">
+            <span th:text="${error}"></span>
+        </div>
+
+        <div class="card">
+            <h2>Add Product</h2>
+            <form th:action="@{/admin/products}" method="post" class="inline-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price (¥)</label>
+                        <input type="number" id="price" name="price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stock">Stock</label>
+                        <input type="number" id="stock" name="stock" min="0" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <form th:action="@{/admin/products}" method="get" class="search-form">
+                <div class="form-row">
+                    <div class="form-group" style="flex:3">
+                        <input type="text" name="keyword" th:value="${keyword}" placeholder="Search products...">
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn btn-primary">Search</button>
+                        <a th:href="@{/admin/products}" class="btn btn-secondary">Clear</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card" th:if="${!products.isEmpty()}">
+            <h2 th:if="${keyword != null && !keyword.isEmpty()}">Results for "[[${keyword}]]" <span class="count">([[${totalElements}]])</span></h2>
+            <h2 th:unless="${keyword != null && !keyword.isEmpty()}">All Products <span class="count">([[${totalElements}]])</span></h2>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="product : ${products}">
+                        <td th:text="${product.id}"></td>
+                        <td th:text="${product.name}"></td>
+                        <td>¥<span th:text="${#numbers.formatDecimal(product.price, 0, 2)}"></span></td>
+                        <td th:text="${product.stock}"></td>
+                        <td class="actions">
+                            <button class="btn btn-sm btn-secondary"
+                                    onclick="openEdit('product-edit-' + ${product.id})">Edit</button>
+                            <form th:action="@{/admin/products/{id}/delete(id=${product.id})}"
+                                  method="post" style="display:inline"
+                                  onsubmit="return confirm('Delete this product?')">
+                                <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination" th:if="${totalPages > 1}">
+                <a th:if="${currentPage > 0}"
+                   th:href="@{/admin/products(page=${currentPage - 1})}" class="btn btn-sm">Prev</a>
+                <span>Page [[${currentPage + 1}]] / [[${totalPages}]]</span>
+                <a th:if="${currentPage < totalPages - 1}"
+                   th:href="@{/admin/products(page=${currentPage + 1})}" class="btn btn-sm">Next</a>
+            </div>
+        </div>
+
+        <p th:if="${products.isEmpty()}" class="empty-state">No products yet. Add one above.</p>
+
+        <!-- Edit modals -->
+        <th:block th:each="product : ${products}">
+            <div class="modal-overlay" th:id="'product-edit-' + ${product.id}" style="display:none">
+                <div class="modal">
+                    <h2>Edit Product #[[${product.id}]]</h2>
+                    <form th:action="@{/admin/products/{id}/update(id=${product.id})}" method="post">
+                        <div class="form-group">
+                            <label>Name</label>
+                            <input type="text" name="name" th:value="${product.name}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Price (¥)</label>
+                            <input type="number" name="price" step="0.01" min="0" th:value="${product.price}" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Stock</label>
+                            <input type="number" name="stock" min="0" th:value="${product.stock}" required>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">Save</button>
+                            <button type="button" class="btn btn-secondary"
+                                    onclick="closeEdit('product-edit-' + ${product.id})">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </th:block>
+    </main>
+
+    <script>
+        function openEdit(id) { document.getElementById(id).style.display = 'flex'; }
+        function closeEdit(id) { document.getElementById(id).style.display = 'none'; }
+    </script>
+</body>
+</html>
