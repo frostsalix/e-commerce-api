@@ -1,6 +1,7 @@
 package com.frostsalix.eco_web_api.repository;
 
 import com.frostsalix.eco_web_api.model.Order;
+import com.frostsalix.eco_web_api.model.OrderStatus;
 import com.frostsalix.eco_web_api.model.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -14,4 +15,6 @@ public interface OrderRepository
     List<Order> findByUser(User user);
 
     Page<Order> findByUser(User user, Pageable pageable);
+
+    long countByStatus(OrderStatus status);
 }

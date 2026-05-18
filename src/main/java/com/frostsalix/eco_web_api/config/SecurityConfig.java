@@ -26,7 +26,9 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/users/login",
                                 "/users/register",
-                                "/payment/webhook"
+                                "/payment/webhook",
+                                "/admin/login",
+                                "/css/**"
                         ).permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/products/**")
@@ -61,6 +63,8 @@ public class SecurityConfig {
                                 "/orders/*/ship",
                                 "/orders/*/deliver"
                         ).hasRole("ADMIN")
+
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
 
                         .anyRequest().authenticated()
                 )

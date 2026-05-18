@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Eco Shop Admin</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="/admin" class="active">Dashboard</a>
+            <a href="/admin/products">Products</a>
+            <a href="/admin/orders">Orders</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h1>Dashboard</h1>
+
+        <div th:if="${success}" class="alert alert-success">
+            <span th:text="${success}"></span>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" th:text="${productCount}">0</div>
+                <div class="stat-label">Products</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${orderCount}">0</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" th:text="${userCount}">0</div>
+                <div class="stat-label">Users</div>
+            </div>
+        </div>
+
+        <h2>Orders by Status</h2>
+        <div class="stats-grid">
+            <div class="stat-card stat-pending">
+                <div class="stat-number" th:text="${pendingOrders}">0</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card stat-paid">
+                <div class="stat-number" th:text="${paidOrders}">0</div>
+                <div class="stat-label">Paid</div>
+            </div>
+            <div class="stat-card stat-shipped">
+                <div class="stat-number" th:text="${shippedOrders}">0</div>
+                <div class="stat-label">Shipped</div>
+            </div>
+            <div class="stat-card stat-done">
+                <div class="stat-number" th:text="${doneOrders}">0</div>
+                <div class="stat-label">Done</div>
+            </div>
+            <div class="stat-card stat-cancelled">
+                <div class="stat-number" th:text="${cancelledOrders}">0</div>
+                <div class="stat-label">Cancelled</div>
+            </div>
+        </div>
+
+        <h2>Recent Orders</h2>
+        <table class="table" th:if="${!recentOrders.isEmpty()}">
+            <thead>
+                <tr>
+                    <th>Order ID</th>
+                    <th>User</th>
+                    <th>Total</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="order : ${recentOrders}">
+                    <td th:text="${order.id}"></td>
+                    <td th:text="${order.user.username}"></td>
+                    <td>¥<span th:text="${#numbers.formatDecimal(order.totalPrice, 0, 2)}"></span></td>
+                    <td><span class="status" th:classappend="'status-' + ${order.status}" th:text="${order.status}"></span></td>
+                    <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                </tr>
+            </tbody>
+        </table>
+        <p th:if="${recentOrders.isEmpty()}" class="empty-state">No orders yet.</p>
+    </main>
+</body>
+</html>

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - Eco Shop Admin</title>
+    <link rel="stylesheet" href="/css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="/admin">Dashboard</a>
+            <a href="/admin/products">Products</a>
+            <a href="/admin/orders" class="active">Orders</a>
+        </div>
+    </nav>
+
+    <main class="container">
+        <h1>Orders</h1>
+
+        <div th:if="${success}" class="alert alert-success">
+            <span th:text="${success}"></span>
+        </div>
+        <div th:if="${error}" class="alert alert-error">
+            <span th:text="${error}"></span>
+        </div>
+
+        <div th:if="${!orders.isEmpty()}">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>User</th>
+                        <th>Items</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Tracking</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="order : ${orders}">
+                        <td th:text="${order.id}"></td>
+                        <td th:text="${order.user.username}"></td>
+                        <td>
+                            <ul class="item-list">
+                                <li th:each="item : ${order.items}">
+                                    [[${item.productName}]] x[[${item.quantity}]]
+                                </li>
+                            </ul>
+                        </td>
+                        <td>¥<span th:text="${#numbers.formatDecimal(order.totalPrice, 0, 2)}"></span></td>
+                        <td><span class="status" th:classappend="'status-' + ${order.status}" th:text="${order.status}"></span></td>
+                        <td th:text="${order.trackingNumber} ?: '-'"></td>
+                        <td th:text="${#temporals.format(order.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
+                        <td class="actions">
+                            <div th:if="${order.status.name() == 'PAID'}">
+                                <button class="btn btn-sm btn-primary"
+                                        th:onclick="'openShip(' + ${order.id} + ')'">Ship</button>
+                            </div>
+                            <div th:if="${order.status.name() == 'SHIPPED'}">
+                                <form th:action="@{/admin/orders/{id}/deliver(id=${order.id})}"
+                                      method="post" style="display:inline">
+                                    <button type="submit" class="btn btn-sm btn-success">Deliver</button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="pagination" th:if="${totalPages > 1}">
+                <a th:if="${currentPage > 0}"
+                   th:href="@{/admin/orders(page=${currentPage - 1})}" class="btn btn-sm">Prev</a>
+                <span>Page [[${currentPage + 1}]] / [[${totalPages}]]</span>
+                <a th:if="${currentPage < totalPages - 1}"
+                   th:href="@{/admin/orders(page=${currentPage + 1})}" class="btn btn-sm">Next</a>
+            </div>
+        </div>
+
+        <p th:if="${orders.isEmpty()}" class="empty-state">No orders yet.</p>
+
+        <!-- Ship modal -->
+        <div class="modal-overlay" id="ship-modal" style="display:none">
+            <div class="modal">
+                <h2>Ship Order</h2>
+                <form th:action="@{/admin/orders/{id}/ship(id=0)}" method="post" id="ship-form">
+                    <div class="form-group">
+                        <label>Tracking Number</label>
+                        <input type="text" name="trackingNumber" required placeholder="SF1234567890">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Confirm Ship</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeShip()">Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function openShip(orderId) {
+            var form = document.getElementById('ship-form');
+            form.action = form.action.replace('/0/', '/' + orderId + '/');
+            document.getElementById('ship-modal').style.display = 'flex';
+        }
+        function closeShip() {
+            document.getElementById('ship-modal').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
