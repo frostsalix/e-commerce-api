@@ -120,6 +120,22 @@ body {
     color: #fff;
 }
 
+.nav-logout {
+    margin-left: auto;
+    text-decoration: none;
+    color: var(--danger);
+    font-size: 0.85rem;
+    font-weight: 500;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    transition: all 0.15s;
+}
+
+.nav-logout:hover {
+    background: var(--danger);
+    color: #fff;
+}
+
 /* Container */
 .container {
     max-width: 1200px;
@@ -153,6 +169,15 @@ h2 {
     border: 1px solid var(--border);
     padding: 20px;
     margin-bottom: 20px;
+}
+
+.card-warning {
+    border-color: #fdcb6e;
+}
+
+.stock-low {
+    color: var(--danger);
+    font-weight: 700;
 }
 
 /* Stats */
@@ -230,6 +255,38 @@ h2 {
 .status-SHIPPED { background: #e2d9f3; color: #4a2d8a; }
 .status-DONE { background: #d4edda; color: #155724; }
 .status-CANCELLED { background: #f8d7da; color: #721c24; }
+
+/* Status filter */
+.status-filter {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.filter-chip {
+    display: inline-block;
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    text-decoration: none;
+    color: var(--text-secondary);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    transition: all 0.15s;
+}
+
+.filter-chip:hover {
+    background: var(--border);
+    color: var(--text);
+}
+
+.filter-chip.active {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+}
 
 /* Buttons */
 .btn {

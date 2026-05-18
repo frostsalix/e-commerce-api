@@ -14,6 +14,7 @@
             <a href="/admin/products">Products</a>
             <a href="/admin/orders" class="active">Orders</a>
         </div>
+        <a href="/admin/logout" class="nav-logout">Logout</a>
     </nav>
 
     <main class="container">
@@ -24,6 +25,15 @@
         </div>
         <div th:if="${error}" class="alert alert-error">
             <span th:text="${error}"></span>
+        </div>
+
+        <div class="status-filter">
+            <a th:href="@{/admin/orders}" class="filter-chip" th:classappend="${currentStatus == null ? 'active' : ''}">All</a>
+            <a th:href="@{/admin/orders(status='PENDING')}" class="filter-chip" th:classappend="${currentStatus == 'PENDING' ? 'active' : ''}">Pending</a>
+            <a th:href="@{/admin/orders(status='PAID')}" class="filter-chip" th:classappend="${currentStatus == 'PAID' ? 'active' : ''}">Paid</a>
+            <a th:href="@{/admin/orders(status='SHIPPED')}" class="filter-chip" th:classappend="${currentStatus == 'SHIPPED' ? 'active' : ''}">Shipped</a>
+            <a th:href="@{/admin/orders(status='DONE')}" class="filter-chip" th:classappend="${currentStatus == 'DONE' ? 'active' : ''}">Done</a>
+            <a th:href="@{/admin/orders(status='CANCELLED')}" class="filter-chip" th:classappend="${currentStatus == 'CANCELLED' ? 'active' : ''}">Cancelled</a>
         </div>
 
         <div th:if="${!orders.isEmpty()}">
@@ -64,6 +74,13 @@
                                 <form th:action="@{/admin/orders/{id}/deliver(id=${order.id})}"
                                       method="post" style="display:inline">
                                     <button type="submit" class="btn btn-sm btn-success">Deliver</button>
+                                </form>
+                            </div>
+                            <div th:if="${order.status.name() == 'PENDING' || order.status.name() == 'PAID'}">
+                                <form th:action="@{/admin/orders/{id}/cancel(id=${order.id})}"
+                                      method="post" style="display:inline"
+                                      onsubmit="return confirm('Cancel order #' + ${order.id} + '?')">
+                                    <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
                                 </form>
                             </div>
                         </td>

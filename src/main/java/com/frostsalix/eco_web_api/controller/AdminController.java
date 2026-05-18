@@ -90,6 +90,8 @@ public class AdminController {
                 PageRequest.of(0, 10, org.springframework.data.domain.Sort.by("createdAt").descending())
         ).getContent());
 
+        model.addAttribute("lowStockProducts", productRepository.findByStockLessThan(5));
+
         return "admin/dashboard";
     }
 
@@ -144,18 +146,34 @@ public class AdminController {
         return "redirect:/admin/products";
     }
 
+    @GetMapping("/logout")
+    public String logout(HttpServletResponse response) {
+        Cookie cookie = new Cookie("jwt_token", "");
+        cookie.setPath("/");
+        cookie.setHttpOnly(true);
+        cookie.setMaxAge(0);
+        response.addCookie(cookie);
+        return "redirect:/admin/login";
+    }
+
     @GetMapping("/orders")
     public String orders(
             Model model,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String status
     ) {
-        var orderPage = orderRepository.findAll(
-                PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending())
-        );
+        var pageable = PageRequest.of(page, size,
+                org.springframework.data.domain.Sort.by("createdAt").descending());
+
+        var orderPage = (status != null && !status.isBlank())
+                ? orderRepository.findByStatus(OrderStatus.valueOf(status), pageable)
+                : orderRepository.findAll(pageable);
+
         model.addAttribute("orders", orderPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", orderPage.getTotalPages());
+        model.addAttribute("currentStatus", status);
         return "admin/orders";
     }
 
@@ -168,6 +186,17 @@ public class AdminController {
         try {
             orderService.shipOrder(id, trackingNumber);
             ra.addFlashAttribute("success", "Order shipped");
+        } catch (RuntimeException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/orders";
+    }
+
+    @PostMapping("/orders/{id}/cancel")
+    public String cancelOrder(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            orderService.cancelOrderByAdmin(id);
+            ra.addFlashAttribute("success", "Order cancelled");
         } catch (RuntimeException e) {
             ra.addFlashAttribute("error", e.getMessage());
         }

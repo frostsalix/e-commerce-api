@@ -221,6 +221,48 @@ public class OrderService {
         return order;
     }
 
+    // 管理员取消任意订单（跳过所有权校验），已支付则回滚库存并退款
+    @Transactional
+    public Order cancelOrderByAdmin(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new RuntimeException("订单不存在"));
+
+        OrderStatus current = order.getStatus();
+
+        if (current == OrderStatus.CANCELLED) {
+            throw new RuntimeException("订单已取消，不可重复操作");
+        }
+
+        if (current == OrderStatus.DONE) {
+            throw new RuntimeException("已完成订单不可取消");
+        }
+
+        if (current == OrderStatus.SHIPPED) {
+            throw new RuntimeException("已发货订单不可取消");
+        }
+
+        if (current == OrderStatus.PAID) {
+            for (OrderItem item : order.getItems()) {
+                Product product = productRepository.findByIdForUpdate(
+                        item.getProduct().getId()
+                );
+                product.setStock(product.getStock() + item.getQuantity());
+                productRepository.save(product);
+            }
+
+            Payment payment = paymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("支付单不存在"));
+            payment.setStatus(PaymentStatus.REFUNDED);
+            paymentRepository.save(payment);
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+        orderRepository.save(order);
+
+        return order;
+    }
+
     // 填写物流单号，PAID → SHIPPED（管理员）
     public Order shipOrder(Long orderId, String trackingNumber) {
 

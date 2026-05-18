@@ -17,4 +17,6 @@ public interface OrderRepository
     Page<Order> findByUser(User user, Pageable pageable);
 
     long countByStatus(OrderStatus status);
+
+    Page<Order> findByStatus(OrderStatus status, Pageable pageable);
 }
