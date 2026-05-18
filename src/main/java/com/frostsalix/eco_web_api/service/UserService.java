@@ -8,6 +8,8 @@ import com.frostsalix.eco_web_api.model.User;
 import com.frostsalix.eco_web_api.repository.UserRepository;
 import com.frostsalix.eco_web_api.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -62,5 +64,16 @@ public class UserService {
                 );
 
         return new LoginResponseDTO(token);
+    }
+
+    public Page<User> getAllUsers(Pageable pageable) {
+        return userRepository.findAll(pageable);
+    }
+
+    public void updateRole(Long userId, String role) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(role);
+        userRepository.save(user);
     }
 }

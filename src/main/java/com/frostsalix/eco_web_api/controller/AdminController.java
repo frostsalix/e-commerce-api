@@ -16,8 +16,13 @@ import jakarta.validation.Valid;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Controller
 @RequestMapping("/admin")
@@ -29,6 +34,10 @@ public class AdminController {
     private final ProductRepository productRepository;
     private final OrderRepository orderRepository;
     private final UserRepository userRepository;
+
+    private static final List<OrderStatus> REVENUE_STATUSES = List.of(
+            OrderStatus.PAID, OrderStatus.SHIPPED, OrderStatus.DONE
+    );
 
     public AdminController(
             UserService userService,
@@ -44,6 +53,24 @@ public class AdminController {
         this.productRepository = productRepository;
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
+    }
+
+    // --- Validation error handler: returns HTML flash message instead of JSON ---
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public String handleValidation(MethodArgumentNotValidException ex, RedirectAttributes ra) {
+        String msg = ex.getBindingResult().getFieldErrors().stream()
+                .map(e -> e.getField() + ": " + e.getDefaultMessage())
+                .reduce((a, b) -> a + "; " + b)
+                .orElse("Validation failed");
+        ra.addFlashAttribute("error", msg);
+
+        String path = ex.getBindingResult().getTarget() != null
+                ? ex.getBindingResult().getTarget().getClass().getSimpleName()
+                : "";
+        if (path.contains("Product")) {
+            return "redirect:/admin/products";
+        }
+        return "redirect:/admin";
     }
 
     @GetMapping("/login")
@@ -92,6 +119,12 @@ public class AdminController {
 
         model.addAttribute("lowStockProducts", productRepository.findByStockLessThan(5));
 
+        model.addAttribute("totalRevenue",
+                orderRepository.sumTotalByStatusIn(REVENUE_STATUSES));
+
+        model.addAttribute("todayRevenue",
+                orderRepository.sumTotalByStatusInSince(REVENUE_STATUSES, LocalDate.now().atStartOfDay()));
+
         return "admin/dashboard";
     }
 
@@ -99,18 +132,24 @@ public class AdminController {
     public String products(
             Model model,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String keyword
     ) {
-        var productPage = productService.searchProducts(null, null, null, page, size);
+        var productPage = productService.searchProducts(keyword, null, null, page, size);
         model.addAttribute("products", productPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", productPage.getTotalPages());
         model.addAttribute("totalElements", productPage.getTotalElements());
+        model.addAttribute("keyword", keyword);
         return "admin/products";
     }
 
     @PostMapping("/products")
-    public String addProduct(@Valid @ModelAttribute ProductDTO dto, RedirectAttributes ra) {
+    public String addProduct(@Valid @ModelAttribute ProductDTO dto, BindingResult br, RedirectAttributes ra) {
+        if (br.hasErrors()) {
+            ra.addFlashAttribute("error", "All fields are required. Name, price >= 0, stock >= 0");
+            return "redirect:/admin/products";
+        }
         try {
             productService.addProduct(dto);
             ra.addFlashAttribute("success", "Product added successfully");
@@ -124,8 +163,13 @@ public class AdminController {
     public String updateProduct(
             @PathVariable Long id,
             @Valid @ModelAttribute ProductDTO dto,
+            BindingResult br,
             RedirectAttributes ra
     ) {
+        if (br.hasErrors()) {
+            ra.addFlashAttribute("error", "All fields are required. Name, price >= 0, stock >= 0");
+            return "redirect:/admin/products";
+        }
         try {
             productService.updateProduct(id, dto);
             ra.addFlashAttribute("success", "Product updated successfully");
@@ -212,5 +256,33 @@ public class AdminController {
             ra.addFlashAttribute("error", e.getMessage());
         }
         return "redirect:/admin/orders";
+    }
+
+    @GetMapping("/users")
+    public String users(
+            Model model,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size
+    ) {
+        var userPage = userService.getAllUsers(PageRequest.of(page, size));
+        model.addAttribute("users", userPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", userPage.getTotalPages());
+        return "admin/users";
+    }
+
+    @PostMapping("/users/{id}/role")
+    public String updateRole(
+            @PathVariable Long id,
+            @RequestParam String role,
+            RedirectAttributes ra
+    ) {
+        try {
+            userService.updateRole(id, role);
+            ra.addFlashAttribute("success", "User role updated to " + role);
+        } catch (RuntimeException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/users";
     }
 }

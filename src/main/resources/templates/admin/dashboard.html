@@ -13,6 +13,7 @@
             <a href="/admin" class="active">Dashboard</a>
             <a href="/admin/products">Products</a>
             <a href="/admin/orders">Orders</a>
+            <a href="/admin/users">Users</a>
         </div>
         <a href="/admin/logout" class="nav-logout">Logout</a>
     </nav>
@@ -36,6 +37,14 @@
             <div class="stat-card">
                 <div class="stat-number" th:text="${userCount}">0</div>
                 <div class="stat-label">Users</div>
+            </div>
+            <div class="stat-card stat-paid">
+                <div class="stat-number">¥<span th:text="${#numbers.formatDecimal(totalRevenue, 0, 2)}">0</span></div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card stat-done">
+                <div class="stat-number">¥<span th:text="${#numbers.formatDecimal(todayRevenue, 0, 2)}">0</span></div>
+                <div class="stat-label">Today Revenue</div>
             </div>
         </div>
 
