@@ -70,3 +70,5 @@ dependency-reduced-pom.xml
 *.zip
 *.tar.gz
 *.rar
+DEVELOPMENT_GUIDE.md
+FRONTEND_INTEGRATION_CHECKLIST.md
