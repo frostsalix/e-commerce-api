@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Eco Shop Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="dashboard.html" class="active">Dashboard</a>
+            <a href="products.html">Products</a>
+            <a href="orders.html">Orders</a>
+            <a href="users.html">Users</a>
+        </div>
+        <a class="nav-logout" onclick="logout()">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Dashboard</h1>
+
+        <div id="success" class="alert alert-success" style="display:none"></div>
+        <div id="error" class="alert alert-error" style="display:none"></div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-number" id="productCount">-</div>
+                <div class="stat-label">Products</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="orderCount">-</div>
+                <div class="stat-label">Total Orders</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="userCount">-</div>
+                <div class="stat-label">Users</div>
+            </div>
+            <div class="stat-card stat-paid">
+                <div class="stat-number" id="totalRevenue">-</div>
+                <div class="stat-label">Total Revenue</div>
+            </div>
+            <div class="stat-card stat-done">
+                <div class="stat-number" id="todayRevenue">-</div>
+                <div class="stat-label">Today Revenue</div>
+            </div>
+        </div>
+
+        <h2>Orders by Status</h2>
+        <div class="stats-grid">
+            <div class="stat-card stat-pending">
+                <div class="stat-number" id="pendingOrders">-</div>
+                <div class="stat-label">Pending</div>
+            </div>
+            <div class="stat-card stat-paid">
+                <div class="stat-number" id="paidOrders">-</div>
+                <div class="stat-label">Paid</div>
+            </div>
+            <div class="stat-card stat-shipped">
+                <div class="stat-number" id="shippedOrders">-</div>
+                <div class="stat-label">Shipped</div>
+            </div>
+            <div class="stat-card stat-done">
+                <div class="stat-number" id="doneOrders">-</div>
+                <div class="stat-label">Done</div>
+            </div>
+            <div class="stat-card stat-cancelled">
+                <div class="stat-number" id="cancelledOrders">-</div>
+                <div class="stat-label">Cancelled</div>
+            </div>
+        </div>
+
+        <h2>Low Stock Warning <span class="count" id="lowStockCount"></span></h2>
+        <div id="lowStockSection"></div>
+
+        <h2>Recent Orders</h2>
+        <div id="recentOrdersSection"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        redirectIfNotLoggedIn();
+
+        function formatMoney(val) {
+            return '¥' + (val || 0).toFixed(2);
+        }
+
+        async function loadDashboard() {
+            try {
+                const data = await api('/api/admin/stats');
+
+                document.getElementById('productCount').textContent = data.productCount;
+                document.getElementById('orderCount').textContent = data.orderCount;
+                document.getElementById('userCount').textContent = data.userCount;
+                document.getElementById('totalRevenue').textContent = formatMoney(data.totalRevenue);
+                document.getElementById('todayRevenue').textContent = formatMoney(data.todayRevenue);
+                document.getElementById('pendingOrders').textContent = data.pendingOrders;
+                document.getElementById('paidOrders').textContent = data.paidOrders;
+                document.getElementById('shippedOrders').textContent = data.shippedOrders;
+                document.getElementById('doneOrders').textContent = data.doneOrders;
+                document.getElementById('cancelledOrders').textContent = data.cancelledOrders;
+
+                // Low stock
+                const lowStock = data.lowStockProducts || [];
+                const lowSec = document.getElementById('lowStockSection');
+                document.getElementById('lowStockCount').textContent = lowStock.length ? '(' + lowStock.length + ')' : '';
+                if (lowStock.length > 0) {
+                    let html = '<div class="card card-warning"><table class="table"><thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th></tr></thead><tbody>';
+                    lowStock.forEach(function(p) {
+                        html += '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>' + formatMoney(p.price) + '</td><td class="stock-low">' + p.stock + '</td></tr>';
+                    });
+                    html += '</tbody></table></div>';
+                    lowSec.innerHTML = html;
+                } else {
+                    lowSec.innerHTML = '<p class="empty-state">All products well stocked.</p>';
+                }
+
+                // Recent orders
+                const recentOrders = data.recentOrders || [];
+                const orderSec = document.getElementById('recentOrdersSection');
+                if (recentOrders.length > 0) {
+                    let html = '<table class="table"><thead><tr><th>Order ID</th><th>User</th><th>Total</th><th>Status</th><th>Created</th></tr></thead><tbody>';
+                    recentOrders.forEach(function(order) {
+                        html += '<tr><td>' + order.id + '</td><td>' + (order.user ? order.user.username : '-') + '</td><td>' + formatMoney(order.totalPrice) + '</td><td><span class="status status-' + order.status + '">' + order.status + '</span></td><td>' + (order.createdAt ? order.createdAt.substring(0, 16) : '-') + '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    orderSec.innerHTML = html;
+                } else {
+                    orderSec.innerHTML = '<p class="empty-state">No orders yet.</p>';
+                }
+            } catch (err) {
+                document.getElementById('error').textContent = err.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

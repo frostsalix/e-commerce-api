@@ -2,6 +2,58 @@
 
 Spring Boot 电商后端 API —— 用户认证、商品管理、购物车、订单生命周期、支付宝支付、管理员面板。
 
+## 项目结构
+
+```
+eco-web-api/
+├── backend/              # Spring Boot 后端项目（Java 21 + Maven）
+│   ├── pom.xml
+│   ├── mvnw / mvnw.cmd
+│   ├── .mvn/
+│   └── src/
+│       ├── main/java/...     # Java 源码
+│       └── main/resources/   # 配置文件 + Thymeleaf 模板
+├── frontend/             # 前端静态页面（纯 HTML/CSS/JS）
+│   ├── login.html            # 管理员登录页
+│   ├── dashboard.html        # 仪表板
+│   ├── products.html         # 商品管理
+│   ├── orders.html           # 订单管理
+│   ├── users.html            # 用户管理
+│   ├── css/admin.css         # 样式
+│   └── js/api.js             # API 请求封装
+└── README.md
+```
+
+## 快速开始
+
+**前置条件：** JDK 21、MySQL 8+ 运行中、数据库 `ecommerce` 已创建。
+
+### 启动后端
+
+```bash
+cd backend
+./mvnw spring-boot:run
+```
+
+应用启动后：
+- API 服务：`http://127.0.0.1:8080`
+- Swagger UI：`http://127.0.0.1:8080/swagger-ui.html`
+- 管理面板（Thymeleaf）：`http://127.0.0.1:8080/admin/login`
+
+### 启动前端
+
+前端是纯静态文件，可以用任意静态服务器运行：
+
+```bash
+cd frontend
+npx serve .          # Node.js
+# 或
+python -m http.server 8081    # Python 3
+# 或直接用浏览器打开 login.html
+```
+
+前端默认连接 `http://localhost:8080` 的后端 API，可在 `js/api.js` 中修改 `API_BASE`。
+
 ## 技术栈
 
 | 层 | 技术 |
@@ -11,25 +63,10 @@ Spring Boot 电商后端 API —— 用户认证、商品管理、购物车、�
 | 持久层 | Spring Data JPA · Hibernate · MySQL |
 | 支付 | Alipay SDK (page pay + async notify) |
 | API 文档 | Swagger / OpenAPI 3 |
-| 模板 | Thymeleaf (admin panel) |
+| 前端 | 纯 HTML/CSS/JS（无框架） |
 | 构建 | Maven Wrapper |
 
-## 快速开始
-
-**前置条件：** JDK 21、MySQL 8+ 运行中、数据库 `ecommerce` 已创建。
-
-```bash
-# 克隆并启动
-git clone <repo-url> && cd eco-web-api
-./mvnw spring-boot:run
-```
-
-应用启动后：
-- API 服务：`http://127.0.0.1:8080`
-- Swagger UI：`http://127.0.0.1:8080/swagger-ui.html`
-- 管理面板：`http://127.0.0.1:8080/admin/login`
-
-## 项目结构
+## 后端架构
 
 ```
 src/main/java/com/frostsalix/eco_web_api/
@@ -45,7 +82,8 @@ src/main/java/com/frostsalix/eco_web_api/
 │   ├── CartController.java       # 购物车 (REST)
 │   ├── OrderController.java      # 订单 (REST)
 │   ├── PaymentController.java    # 支付宝支付 (REST)
-│   └── AdminController.java      # 管理面板 (MVC/Thymeleaf)
+│   ├── AdminController.java      # 管理面板 (MVC/Thymeleaf)
+│   └── AdminRestController.java  # 管理面板 (REST API)
 ├── dto/                          # 请求/响应 DTO
 ├── model/
 │   ├── User.java                 # 用户实体
@@ -74,19 +112,6 @@ src/main/java/com/frostsalix/eco_web_api/
 │   └── JwtUtil.java              # JWT 生成/解析工具
 └── vo/
     └── UserVO.java               # 用户视图对象
-```
-
-## 架构
-
-```
-Client
-  │
-  ├─ REST API (JSON) ──→ RestController ──→ Service ──→ Repository ──→ MySQL
-  │
-  └─ Admin Panel (HTML) ──→ AdminController (MVC) ──→ Service ──→ Repository ──→ MySQL
-                                │
-                                ├─ Thymeleaf templates in resources/templates/admin/
-                                └─ Cookie-based JWT (login → set cookie → browser auto-send)
 ```
 
 **响应格式：** 所有 REST 端点统一返回 `ApiResponse<T>`：
@@ -161,7 +186,7 @@ HTTP 状态码始终为 200。业务错误通过 JSON `code` 字段传递（400 
 | POST | `/payment/{orderId}/alipay` | 发起支付宝支付，返回支付表单 | USER+ |
 | POST | `/payment/webhook` | 支付宝异步通知回调 | 否 |
 
-### 管理 (Admin Panel)
+### 管理后台 (Thymeleaf)
 
 | 方法 | 端点 | 说明 | 认证 |
 |------|------|------|------|
@@ -174,6 +199,16 @@ HTTP 状态码始终为 200。业务错误通过 JSON `code` 字段传递（400 
 | GET | `/admin/users` | 用户列表 | ADMIN |
 | POST | `/admin/users/{id}/role` | 修改用户角色 | ADMIN |
 
+### 管理后台 (REST API，供前端静态页面调用)
+
+| 方法 | 端点 | 说明 | 认证 |
+|------|------|------|------|
+| GET | `/api/admin/stats` | 仪表板统计 | ADMIN |
+| GET | `/api/admin/orders` | 订单列表（分页+筛选） | ADMIN |
+| PUT | `/api/admin/orders/{id}/cancel` | 管理员取消订单 | ADMIN |
+| GET | `/api/admin/users` | 用户列表（分页） | ADMIN |
+| PUT | `/api/admin/users/{id}/role` | 修改用户角色 | ADMIN |
+
 ## 业务设计
 
 ### 订单状态机
@@ -184,19 +219,11 @@ PENDING ──→ PAID ──→ SHIPPED ──→ DONE
   └──→ CANCELLED ←──────┘
 ```
 
-- **PENDING**：订单已创建，等待支付
-- **PAID**：支付成功，库存已扣减，等待发货
-- **SHIPPED**：已发货，等待确认收货
-- **DONE**：已确认收货，订单完成
-- **CANCELLED**：已取消（用户自助 / 管理员取消）
-
 ### 库存扣减时机
 
 **库存在实际支付成功时扣减，而非下单时。**
-
 - `OrderService.createOrder()` 仅校验库存是否充足，不扣减
 - `PaymentServiceImpl.success()` 使用 `SELECT ... FOR UPDATE`（悲观写锁）完成原子扣减
-- 两个方法均在 `@Transactional` 中，保证一致性
 
 ### 订单快照
 
@@ -204,26 +231,12 @@ PENDING ──→ PAID ──→ SHIPPED ──→ DONE
 
 ### 支付与订单解耦
 
-`Payment.orderId` 是普通 `Long` 字段，不与 `Order` 建立 JPA 实体关联。支付和订单在 ORM 层面独立。
-
-## 环境变量
-
-| 变量 | 默认值 | 说明 |
-|------|------|------|
-| `DB_URL` | `jdbc:mysql://127.0.0.1:3306/ecommerce?...` | 数据库连接 |
-| `DB_USERNAME` | `root` | 数据库用户 |
-| `DB_PASSWORD` | — | 数据库密码 |
-| `JWT_SECRET` | (内置) | JWT 签名密钥 |
-| `ALIPAY_APP_ID` | — | 支付宝应用 ID |
-| `ALIPAY_PRIVATE_KEY` | — | 应用私钥 |
-| `ALIPAY_PUBLIC_KEY` | — | 支付宝公钥 |
-| `ALIPAY_GATEWAY_URL` | `https://openapi.alipay.com/gateway.do` | 支付宝网关 |
-| `ALIPAY_NOTIFY_URL` | — | 支付异步通知地址 |
-| `ALIPAY_RETURN_URL` | — | 支付完成同步跳转地址 |
+`Payment.orderId` 是普通 `Long` 字段，不与 `Order` 建立 JPA 实体关联。
 
 ## 构建
 
 ```bash
+cd backend
 ./mvnw clean package              # 完整构建
 ./mvnw clean package -DskipTests  # 跳过测试
 ```

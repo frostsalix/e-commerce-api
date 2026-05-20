@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orders - Eco Shop Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="products.html">Products</a>
+            <a href="orders.html" class="active">Orders</a>
+            <a href="users.html">Users</a>
+        </div>
+        <a class="nav-logout" onclick="logout()">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Orders</h1>
+
+        <div id="success" class="alert alert-success" style="display:none"></div>
+        <div id="error" class="alert alert-error" style="display:none"></div>
+
+        <div class="status-filter">
+            <span class="filter-chip active" onclick="filterStatus('')">All</span>
+            <span class="filter-chip" onclick="filterStatus('PENDING')">Pending</span>
+            <span class="filter-chip" onclick="filterStatus('PAID')">Paid</span>
+            <span class="filter-chip" onclick="filterStatus('SHIPPED')">Shipped</span>
+            <span class="filter-chip" onclick="filterStatus('DONE')">Done</span>
+            <span class="filter-chip" onclick="filterStatus('CANCELLED')">Cancelled</span>
+        </div>
+
+        <div id="ordersSection"></div>
+        <div class="pagination" id="pagination"></div>
+    </main>
+
+    <!-- Ship modal -->
+    <div class="modal-overlay" id="shipModal">
+        <div class="modal">
+            <h2>Ship Order</h2>
+            <form id="shipForm">
+                <div class="form-group">
+                    <label>Tracking Number</label>
+                    <input type="text" id="trackingNumber" required placeholder="SF1234567890">
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Confirm Ship</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeShip()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        redirectIfNotLoggedIn();
+
+        var currentPage = 0,
+            totalPages = 1,
+            currentStatus = '';
+
+        function showSuccess(msg) {
+            var el = document.getElementById('success');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('error');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        function filterStatus(status) {
+            currentStatus = status;
+            currentPage = 0;
+            document.querySelectorAll('.filter-chip').forEach(function(c) { c.classList.remove('active'); });
+            if (status) {
+                document.querySelectorAll('.filter-chip').forEach(function(c) {
+                    if (c.textContent === status) c.classList.add('active');
+                });
+            } else {
+                document.querySelector('.filter-chip').classList.add('active');
+            }
+            loadOrders();
+        }
+
+        async function loadOrders() {
+            try {
+                var params = 'page=' + currentPage + '&size=20';
+                if (currentStatus) params += '&status=' + currentStatus;
+                var data = await api('/api/admin/orders?' + params);
+
+                var orders = data.content || [];
+                totalPages = data.totalPages || 1;
+
+                if (orders.length > 0) {
+                    var html = '<table class="table"><thead><tr><th>Order ID</th><th>User</th><th>Items</th><th>Total</th><th>Status</th><th>Tracking</th><th>Created</th><th>Actions</th></tr></thead><tbody>';
+                    orders.forEach(function(order) {
+                        html += '<tr>';
+                        html += '<td>' + order.id + '</td>';
+                        html += '<td>' + (order.user ? order.user.username : '-') + '</td>';
+                        html += '<td><ul class="item-list">';
+                        (order.items || []).forEach(function(item) {
+                            html += '<li>' + item.productName + ' x' + item.quantity + '</li>';
+                        });
+                        html += '</ul></td>';
+                        html += '<td>¥' + (order.totalPrice || 0).toFixed(2) + '</td>';
+                        html += '<td><span class="status status-' + order.status + '">' + order.status + '</span></td>';
+                        html += '<td>' + (order.trackingNumber || '-') + '</td>';
+                        html += '<td>' + (order.createdAt ? order.createdAt.substring(0, 16) : '-') + '</td>';
+                        html += '<td class="actions">';
+                        if (order.status === 'PAID') {
+                            html += '<button class="btn btn-sm btn-primary" onclick="openShip(' + order.id + ')">Ship</button>';
+                        }
+                        if (order.status === 'SHIPPED') {
+                            html += '<button class="btn btn-sm btn-success" onclick="deliverOrder(' + order.id + ')">Deliver</button>';
+                        }
+                        if (order.status === 'PENDING' || order.status === 'PAID') {
+                            html += '<button class="btn btn-sm btn-danger" onclick="cancelOrder(' + order.id + ')">Cancel</button>';
+                        }
+                        html += '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('ordersSection').innerHTML = html;
+                } else {
+                    document.getElementById('ordersSection').innerHTML = '<p class="empty-state">No orders yet.</p>';
+                }
+
+                var pag = document.getElementById('pagination');
+                if (totalPages > 1) {
+                    var phtml = '';
+                    if (currentPage > 0) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage - 1) + ')">Prev</button>';
+                    phtml += '<span>Page ' + (currentPage + 1) + ' / ' + totalPages + '</span>';
+                    if (currentPage < totalPages - 1) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage + 1) + ')">Next</button>';
+                    pag.innerHTML = phtml;
+                } else {
+                    pag.innerHTML = '';
+                }
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function goPage(p) { currentPage = p; loadOrders(); }
+
+        // Ship
+        var shipOrderId = null;
+
+        function openShip(orderId) {
+            shipOrderId = orderId;
+            document.getElementById('shipModal').style.display = 'flex';
+        }
+
+        function closeShip() {
+            shipOrderId = null;
+            document.getElementById('shipModal').style.display = 'none';
+            document.getElementById('trackingNumber').value = '';
+        }
+
+        document.getElementById('shipForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                var tn = document.getElementById('trackingNumber').value;
+                await api('/orders/' + shipOrderId + '/ship?trackingNumber=' + encodeURIComponent(tn), { method: 'PUT' });
+                closeShip();
+                showSuccess('Order shipped');
+                loadOrders();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        async function deliverOrder(id) {
+            try {
+                await api('/orders/' + id + '/deliver', { method: 'PUT' });
+                showSuccess('Order delivered');
+                loadOrders();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        async function cancelOrder(id) {
+            if (!confirm('Cancel order #' + id + '?')) return;
+            try {
+                await api('/api/admin/orders/' + id + '/cancel', { method: 'PUT' });
+                showSuccess('Order cancelled');
+                loadOrders();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        loadOrders();
+    </script>
+</body>
+</html>

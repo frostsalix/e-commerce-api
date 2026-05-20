@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products - Eco Shop Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="products.html" class="active">Products</a>
+            <a href="orders.html">Orders</a>
+            <a href="users.html">Users</a>
+        </div>
+        <a class="nav-logout" onclick="logout()">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Products</h1>
+
+        <div id="success" class="alert alert-success" style="display:none"></div>
+        <div id="error" class="alert alert-error" style="display:none"></div>
+
+        <div class="card">
+            <h2>Add Product</h2>
+            <form id="addForm" class="inline-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="name">Name</label>
+                        <input type="text" id="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Price (¥)</label>
+                        <input type="number" id="price" step="0.01" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="stock">Stock</label>
+                        <input type="number" id="stock" min="0" required>
+                    </div>
+                    <div class="form-group form-group-btn">
+                        <button type="submit" class="btn btn-primary">Add</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="card">
+            <div class="form-row">
+                <div class="form-group" style="flex:3">
+                    <input type="text" id="keyword" placeholder="Search products...">
+                </div>
+                <div class="form-group form-group-btn">
+                    <button type="button" class="btn btn-primary" onclick="searchProducts()">Search</button>
+                    <button type="button" class="btn btn-secondary" onclick="clearSearch()">Clear</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2 id="resultTitle">All Products <span class="count" id="resultCount"></span></h2>
+            <div id="productsTable"></div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </main>
+
+    <!-- Edit modal -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal">
+            <h2>Edit Product #<span id="editId"></span></h2>
+            <form id="editForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="editName" required>
+                </div>
+                <div class="form-group">
+                    <label>Price (¥)</label>
+                    <input type="number" id="editPrice" step="0.01" min="0" required>
+                </div>
+                <div class="form-group">
+                    <label>Stock</label>
+                    <input type="number" id="editStock" min="0" required>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    <button type="button" class="btn btn-secondary" onclick="closeEdit()">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        redirectIfNotLoggedIn();
+
+        var currentPage = 0,
+            totalPages = 1,
+            currentKeyword = '';
+
+        function showSuccess(msg) {
+            var el = document.getElementById('success');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('error');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        async function loadProducts() {
+            try {
+                var params = 'page=' + currentPage + '&size=20';
+                if (currentKeyword) params += '&keyword=' + encodeURIComponent(currentKeyword);
+                var data = await api('/products?' + params);
+
+                var products = data.content || [];
+                totalPages = data.totalPages || 1;
+                document.getElementById('resultCount').textContent = '(' + (data.totalElements || 0) + ')';
+
+                if (currentKeyword) {
+                    document.getElementById('resultTitle').innerHTML = 'Results for "' + currentKeyword + '" <span class="count">(' + (data.totalElements || 0) + ')</span>';
+                } else {
+                    document.getElementById('resultTitle').innerHTML = 'All Products <span class="count">(' + (data.totalElements || 0) + ')</span>';
+                }
+
+                if (products.length > 0) {
+                    var html = '<table class="table"><thead><tr><th>ID</th><th>Name</th><th>Price</th><th>Stock</th><th>Actions</th></tr></thead><tbody>';
+                    products.forEach(function(p) {
+                        html += '<tr><td>' + p.id + '</td><td>' + p.name + '</td><td>¥' + p.price.toFixed(2) + '</td><td>' + p.stock + '</td>';
+                        html += '<td class="actions">';
+                        html += '<button class="btn btn-sm btn-secondary" onclick="openEdit(' + p.id + ',\'' + p.name + '\',' + p.price + ',' + p.stock + ')">Edit</button>';
+                        html += '<button class="btn btn-sm btn-danger" onclick="deleteProduct(' + p.id + ')">Delete</button>';
+                        html += '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('productsTable').innerHTML = html;
+                } else {
+                    document.getElementById('productsTable').innerHTML = '<p class="empty-state">No products yet. Add one above.</p>';
+                }
+
+                // Pagination
+                var pag = document.getElementById('pagination');
+                if (totalPages > 1) {
+                    var phtml = '';
+                    if (currentPage > 0) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage - 1) + ')">Prev</button>';
+                    phtml += '<span>Page ' + (currentPage + 1) + ' / ' + totalPages + '</span>';
+                    if (currentPage < totalPages - 1) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage + 1) + ')">Next</button>';
+                    pag.innerHTML = phtml;
+                } else {
+                    pag.innerHTML = '';
+                }
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function goPage(p) { currentPage = p; loadProducts(); }
+
+        function searchProducts() {
+            currentKeyword = document.getElementById('keyword').value;
+            currentPage = 0;
+            loadProducts();
+        }
+
+        function clearSearch() {
+            document.getElementById('keyword').value = '';
+            currentKeyword = '';
+            currentPage = 0;
+            loadProducts();
+        }
+
+        document.getElementById('addForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            try {
+                await api('/products', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        name: document.getElementById('name').value,
+                        price: parseFloat(document.getElementById('price').value),
+                        stock: parseInt(document.getElementById('stock').value)
+                    })
+                });
+                document.getElementById('addForm').reset();
+                showSuccess('Product added successfully');
+                loadProducts();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        function openEdit(id, name, price, stock) {
+            document.getElementById('editId').textContent = id;
+            document.getElementById('editName').value = name;
+            document.getElementById('editPrice').value = price;
+            document.getElementById('editStock').value = stock;
+            document.getElementById('editModal').style.display = 'flex';
+        }
+
+        function closeEdit() {
+            document.getElementById('editModal').style.display = 'none';
+        }
+
+        document.getElementById('editForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            var id = document.getElementById('editId').textContent;
+            try {
+                await api('/products/' + id, {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        name: document.getElementById('editName').value,
+                        price: parseFloat(document.getElementById('editPrice').value),
+                        stock: parseInt(document.getElementById('editStock').value)
+                    })
+                });
+                closeEdit();
+                showSuccess('Product updated successfully');
+                loadProducts();
+            } catch (err) {
+                showError(err.message);
+            }
+        });
+
+        async function deleteProduct(id) {
+            if (!confirm('Delete this product?')) return;
+            try {
+                await api('/products/' + id, { method: 'DELETE' });
+                showSuccess('Product deleted successfully');
+                loadProducts();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        loadProducts();
+    </script>
+</body>
+</html>

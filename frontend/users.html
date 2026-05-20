@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users - Eco Shop Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-brand">Eco Shop Admin</div>
+        <div class="nav-links">
+            <a href="dashboard.html">Dashboard</a>
+            <a href="products.html">Products</a>
+            <a href="orders.html">Orders</a>
+            <a href="users.html" class="active">Users</a>
+        </div>
+        <a class="nav-logout" onclick="logout()">Logout</a>
+    </nav>
+
+    <main class="container">
+        <h1>Users</h1>
+
+        <div id="success" class="alert alert-success" style="display:none"></div>
+        <div id="error" class="alert alert-error" style="display:none"></div>
+
+        <div id="usersSection"></div>
+        <div class="pagination" id="pagination"></div>
+    </main>
+
+    <script src="js/api.js"></script>
+    <script>
+        redirectIfNotLoggedIn();
+
+        var currentPage = 0,
+            totalPages = 1;
+
+        function showSuccess(msg) {
+            var el = document.getElementById('success');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        function showError(msg) {
+            var el = document.getElementById('error');
+            el.textContent = msg;
+            el.style.display = 'block';
+            setTimeout(function() { el.style.display = 'none'; }, 3000);
+        }
+
+        async function loadUsers() {
+            try {
+                var data = await api('/api/admin/users?page=' + currentPage + '&size=20');
+                var users = data.content || [];
+                totalPages = data.totalPages || 1;
+
+                if (users.length > 0) {
+                    var html = '<table class="table"><thead><tr><th>ID</th><th>Username</th><th>Role</th><th>Actions</th></tr></thead><tbody>';
+                    users.forEach(function(user) {
+                        html += '<tr><td>' + user.id + '</td><td>' + user.username + '</td>';
+                        var roleClass = (user.role === 'ADMIN') ? 'status-PAID' : 'status-PENDING';
+                        html += '<td><span class="status ' + roleClass + '">' + user.role + '</span></td>';
+                        html += '<td class="actions">';
+                        if (user.role === 'USER') {
+                            html += '<button class="btn btn-sm btn-primary" onclick="updateRole(' + user.id + ',\'ADMIN\')">Promote to Admin</button>';
+                        } else {
+                            html += '<button class="btn btn-sm btn-secondary" onclick="updateRole(' + user.id + ',\'USER\')">Demote</button>';
+                        }
+                        html += '</td></tr>';
+                    });
+                    html += '</tbody></table>';
+                    document.getElementById('usersSection').innerHTML = html;
+                } else {
+                    document.getElementById('usersSection').innerHTML = '<p class="empty-state">No users yet.</p>';
+                }
+
+                var pag = document.getElementById('pagination');
+                if (totalPages > 1) {
+                    var phtml = '';
+                    if (currentPage > 0) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage - 1) + ')">Prev</button>';
+                    phtml += '<span>Page ' + (currentPage + 1) + ' / ' + totalPages + '</span>';
+                    if (currentPage < totalPages - 1) phtml += '<button class="btn btn-sm" onclick="goPage(' + (currentPage + 1) + ')">Next</button>';
+                    pag.innerHTML = phtml;
+                } else {
+                    pag.innerHTML = '';
+                }
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        function goPage(p) { currentPage = p; loadUsers(); }
+
+        async function updateRole(id, role) {
+            var action = role === 'ADMIN' ? 'promote' : 'demote';
+            if (action === 'demote' && !confirm('Demote this admin to USER?')) return;
+            try {
+                await api('/api/admin/users/' + id + '/role?role=' + role, { method: 'PUT' });
+                showSuccess('User role updated to ' + role);
+                loadUsers();
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
